@@ -9,9 +9,9 @@ app.use(bodyParser.json());
 
 const db = mysql.createConnection({
   host: 'localhost',
-  user: 'root',
-  password: '', // A MySQL adatbázis jelszava
-  database: 'testdb' // Adatbázis neve
+  user: 'viktor',
+  password: 'lplay@24', // A MySQL adatbázis jelszava
+  database: 'lustiq_play' // Adatbázis neve
 });
 
 db.connect(err => {

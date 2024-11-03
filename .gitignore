@@ -1,2 +1,5 @@
 /backend/node_modules/
 /play/node_modules/
+/play/android/.gradle/
+/play/android/app/.cxx/
+/play/android/app/build/
