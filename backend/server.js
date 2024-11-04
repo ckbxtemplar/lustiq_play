@@ -1,10 +1,12 @@
 const express = require('express');
+const cors = require('cors');
 const mysql = require('mysql');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
 
 const app = express();
+app.use(cors());
 app.use(bodyParser.json());
 
 const db = mysql.createConnection({
@@ -21,12 +23,12 @@ db.connect(err => {
 
 // Regisztráció (opcionális, hogy létrehozz egy felhasználót)
 app.post('/register', (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, username } = req.body;
   const salt = bcrypt.genSaltSync(10);
   const hashedPassword = bcrypt.hashSync(password, salt);
 
-  const sql = `INSERT INTO users (email, password) VALUES (?, ?)`;
-  db.query(sql, [email, hashedPassword], (err, result) => {
+  const sql = `INSERT INTO users (email, password, username) VALUES (?, ?, ?)`;
+  db.query(sql, [email, hashedPassword, username], (err, result) => {
     if (err) throw err;
     res.send('User registered!');
   });

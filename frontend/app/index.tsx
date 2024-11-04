@@ -42,10 +42,10 @@ const App = () => {
       return;
     }
 
-    axios.post('http://localhost:3000/regist', {
-      username,
+    axios.post('http://localhost:3000/register', {
       email,
-      password
+      password,
+      username      
     })
     .then(response => {
       // Alert.alert('Success', 'Registration successful!');
@@ -115,7 +115,7 @@ const App = () => {
             placeholder="Password"
           />
           <View style={{ marginBottom:10 }}><Button title="Login" onPress={login} /></View>
-          <View style={{ marginBottom:10 }}><Button title="Register" onPress={() => setShowRegistration(true)} style={{ marginTop: 10, marginBottom:10 }} /></View>
+          <View style={{ marginBottom:10 }}><Button title="Register" onPress={() => setShowRegistration(true)} /></View>
           {message ? <Text style={{ marginTop: 20 }}>{message}</Text> : null}
         </>
       )}
