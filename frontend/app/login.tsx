@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { View, Text, TextInput } from 'react-native';
 import { Alert } from 'react-native';
 import { useAuth } from '../AuthContext';
+import { useRouter,Redirect  } from 'expo-router';
 import axios from 'axios';
-import Footer from '../components/Footer';
+import FooterLogin from '../components/FooterLogin';
 import LustiqButton from '../components/LustiqButton';
 import ImageLogo from '../components/ImageLogo';
 import globalStyles from '../styles/styles';
 
 const LoginScreen = () => {
-  const { platformdata, user, loggedIn, logIn, logOut } = useAuth();    
+  const { loggedIn, platformdata, logIn } = useAuth();    
+  const router = useRouter();  
 
   const [showRegistration, setShowRegistration] = useState(false);
   const devHost = platformdata.devHost;
@@ -19,6 +21,12 @@ const LoginScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState('');  
   const [username, setUsername] = useState(''); 
   const [message, setMessage] = useState('');  
+
+
+
+  if (loggedIn) {
+    return <Redirect href={'/home'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
+  }  
 
   // LOGIN
   const login = () => {
@@ -71,8 +79,8 @@ const LoginScreen = () => {
 
   return (
     <View style={globalStyles.body}>
-      <View style={globalStyles.container}>
-      <ImageLogo/>
+      <View style={globalStyles.loginContainer}>
+      <ImageLogo /> 
       {showRegistration ? (
         // Regisztrációs felület
         <>
@@ -110,7 +118,7 @@ const LoginScreen = () => {
             placeholder="Confirm Password"
             placeholderTextColor="#CF3E45"
           />
-          <View style={globalStyles.button}><LustiqButton  title="Regist" onPress={register} /></View>
+          <View style={{ marginBottom:10 }}><LustiqButton  title="Regist" onPress={register} /></View>
           <View style={{ marginBottom:10 }}><LustiqButton title="Back to Login" onPress={() => setShowRegistration(false)} /></View>
         </>
       ) : (
@@ -139,10 +147,9 @@ const LoginScreen = () => {
         </>
       )}
       </View>
-      <Footer />  
+      <FooterLogin />  
     </View>
   );
 };
 
-console.log('https://lustiq.eu');
 export default LoginScreen;

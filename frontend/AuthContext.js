@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState,useEffect, useContext } from 'react';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // AuthContext létrehozása
 const AuthContext = createContext();
@@ -13,11 +14,27 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null); 
   const [loggedIn, setLoggedIn] = useState(false);
 
-  const logIn = (userData) => { 
+  const logIn = async (userData) => { 
     setUser(userData); 
     setLoggedIn(true); 
+    await AsyncStorage.setItem('user', JSON.stringify(userData));
   };
-  const logOut = () => { setUser(null); setLoggedIn(false); }
+  const logOut = async () => { 
+    setUser(null); 
+    setLoggedIn(false); 
+    await AsyncStorage.removeItem('user');
+  }
+
+  useEffect(() => {
+    const checkUserSession = async () => {
+      const userSession = await AsyncStorage.getItem('user');
+      if (userSession) {
+        setUser(JSON.parse(userSession));
+        setLoggedIn(true);
+      }
+    };
+    checkUserSession();
+  }, []);
 
   return (
     <AuthContext.Provider value={{ platformdata, user, loggedIn, logIn, logOut }}>
@@ -30,3 +47,5 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
+console.log('https://lustiq.eu');

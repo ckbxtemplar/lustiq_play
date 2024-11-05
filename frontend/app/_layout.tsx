@@ -1,34 +1,36 @@
 import { Stack, useRouter } from 'expo-router';
-import { View , Button } from 'react-native';
+import { View, Button } from 'react-native';
 import { AuthProvider } from '../AuthContext';
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const router = useRouter();
 
   return (
-    <AuthProvider>
-      <Stack 
-        screenOptions={{ headerShown: true,
+    <Stack
+      screenOptions={{
+        headerShown: true,
         headerLeft: () => (
           <View style={{ flexDirection: 'row' }}>
-            <Button
-              onPress={() => router.push('/')}
-              title="Index"
-            />            
-            <Button
-              onPress={() => router.push('/login')}
-              title="Login"
-            /> 
-            <Button
-              onPress={() => router.push('/home')}
-              title="Home"
-            />            
-          </View>         
+            <Button onPress={() => router.push('/login')} title="Login" />
+            <Button onPress={() => router.push('/')} title="Index" />
+            <Button onPress={() => router.push('/home')} title="Home" />
+            <Button onPress={() => router.push('/game')} title="Game" />              
+          </View>
         ),
-       }}>
-        <Stack.Screen name="login" />
-        <Stack.Screen name="home" />
-      </Stack>
+      }}
+    >
+      <Stack.Screen name="index" />      
+      <Stack.Screen name="login" />
+      <Stack.Screen name="home" /> 
+      <Stack.Screen name="game" />       
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutContent />
     </AuthProvider>
   );
 }

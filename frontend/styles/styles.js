@@ -1,10 +1,12 @@
 import { StyleSheet } from 'react-native';
+import { COLORS } from '../styles/constants';
+
 
 const globalStyles = StyleSheet.create({
   body: {
     flex: 1,
     justifyContent: 'center', // Középre igazítja a container-t függőlegesen
-    backgroundColor: '#FA2243',
+    backgroundColor: COLORS.primary.background,
   },    
   container: { 
     alignSelf: 'center',
@@ -12,6 +14,16 @@ const globalStyles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     padding: 30,
+  },
+  loginContainer:{
+    alignSelf: 'center',
+    flex:1,
+    width: '100%',
+    maxWidth: 500,
+    padding: 30,  
+    backgroundColor:COLORS.secondary.background,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20     
   },
   button: {
     backgroundColor: '#ff5733',
@@ -26,7 +38,7 @@ const globalStyles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    backgroundColor: '#600F13',
+    backgroundColor: COLORS.primary.background,
     color: '#CF3E45',
     fontSize: 15,
     padding: 10, 
@@ -43,10 +55,10 @@ const globalStyles = StyleSheet.create({
     color:'black'
   },
   colorPrimary:{
-    color:'#600F13'
+    color: COLORS.primary.text
   },
   colorSecondary:{
-    color:'#FE586A'
+    color: COLORS.secondary.text
   },  
 });
 
