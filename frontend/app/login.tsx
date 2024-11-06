@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import { View, Text, TextInput } from 'react-native';
 import { Alert } from 'react-native';
 import { useAuth } from '../AuthContext';
-import { useRouter,Redirect  } from 'expo-router';
+import { Redirect  } from 'expo-router';
 import axios from 'axios';
 import FooterLogin from '../components/FooterLogin';
 import LustiqButton from '../components/LustiqButton';
 import ImageLogo from '../components/ImageLogo';
 import globalStyles from '../styles/styles';
+import JWT from 'expo-jwt';
 
 const LoginScreen = () => {
   const { loggedIn, platformdata, logIn } = useAuth();    
-  const router = useRouter();  
 
   const [showRegistration, setShowRegistration] = useState(false);
   const devHost = platformdata.devHost;
@@ -30,13 +30,13 @@ const LoginScreen = () => {
 
   // LOGIN
   const login = () => {
-    axios.post(devHost+'/login', { email, password })
+    axios.post(`http://${devHost}:3000/login`, { email, password })
       .then(response => {
-        const { token } = response.data;
-        const userData = {name:'Viktor', id:1};
-        logIn(userData);
+        const { token } = response.data; 
+        const decodedToken = JWT.decode(token, 'yvhtR5}#O]w7lAs');     
+        logIn(decodedToken);
        
-        axios.get(devHost+'/hello', {
+        axios.get(`http://${devHost}:3000/hello`, {
           headers: { 'Authorization': token }
         })
         .then(res => {
@@ -49,7 +49,7 @@ const LoginScreen = () => {
       })
       .catch(err => {
         Alert.alert('Error', 'Invalid email or password');
-        console.log('Invalid email or password');
+        console.log(err);
       });
   };
 
@@ -61,7 +61,7 @@ const LoginScreen = () => {
       return;
     }
 
-    axios.post(devHost+'/register', {
+    axios.post(`http://${devHost}:3000/register`, {
       email,
       password,
       username      

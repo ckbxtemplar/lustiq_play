@@ -14,7 +14,7 @@ const FooterLogin = () => {
         {loggedIn ? (            
             <>
             <Pressable onPress={logOut} style={{marginRight:20}}><Octicons name="sign-out" size={24} color="black"  style={globalStyles.colorPrimary}/></Pressable>            
-            <Text style={globalStyles.colorPrimary}>Be vagy jelentkezve <Text style={{fontWeight:'bold'}}>{user.name}</Text> !</Text>            
+            <Text style={globalStyles.colorPrimary}>Be vagy jelentkezve <Text style={{fontWeight:'bold'}}>{user.username}</Text> !</Text>            
             </>
         ) : (
           <Text style={globalStyles.colorPrimary}>Nincs bejelentkezve</Text>
