@@ -5,6 +5,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
 const WebSocket = require('ws');
+const multer = require('multer');
+const sharp = require('sharp');
+const fs = require('fs');
 
 // SQL
 const db = mysql.createConnection({
@@ -38,7 +41,6 @@ wss.on('connection', (ws, req) => {
     // Amikor egy kliens bejelentkezik, tároljuk az SQL adatbázisban
     if (data.type === 'hello') {       
       userId = data.userId;     
-      console.log(`User ${userId} connected.`);
       const query = `INSERT INTO user_sessions (user_id, is_connected) VALUES (?, ?) ON DUPLICATE KEY UPDATE is_connected = ?, last_connected = CURRENT_TIMESTAMP`;
       db.query(query, [userId, true, true], (err, results) => {
         if (err) {
@@ -68,25 +70,52 @@ wss.on('connection', (ws, req) => {
       });  
 
     } else if (data.type === 'join'){
-      const fromUserId = data.fromUserId;
+      let messagesData = {};
       const toSessionToken = data.toSessionToken;
-
-      console.log('beérkező JOIN kérelem');
-      console.log(fromUserId);      
-      console.log(toSessionToken);            
-
+      const fromSessionToken = data.fromSessionToken;      
+  
       // Ellenőrizzük, hogy van-e ilyen session_token-hez csatlakozott kliens
-      if (clients[toSessionToken]) {
-        console.log('megtaláltuk a másik klienst');  
-        // Ha megtaláltuk **B** játékost, küldjük neki az üzenetet
+      if (clients[toSessionToken] && clients[fromSessionToken] && toSessionToken && fromSessionToken) 
+      {
         const targetClient = clients[toSessionToken];
-        targetClient.send(JSON.stringify({
-          type: 'notification',
-          message: `${fromUserId} has joined the game!`
-        }));
-      }            
-    }
+        const fromClient = clients[fromSessionToken];
 
+        const directions  = {
+          "request":{token: fromSessionToken, to:toSessionToken, client:targetClient}, 
+          "accept":{token: toSessionToken, to:fromSessionToken, client:fromClient}
+        };
+
+        const queryPromises = Object.entries(directions).map(async ([key, item]) => {
+          const userData = await getUserData(item.token);
+          messagesData[item.to] = {
+            type: 'join',
+            message: `${userData.username} has joined the game!`,
+            direction: key,
+            joinedUser: { userId: userData.userId, userSession: item.token, username: userData.username, avatar:userData.avatar }
+          };
+        }); 
+
+        Promise.all(queryPromises).then(() => {
+          sendWsMessages(messagesData);
+
+          const query = `INSERT INTO rooms (accept, request, is_connected) 
+            VALUES (?, ?, 1)
+            ON DUPLICATE KEY UPDATE 
+                last_connected = CURRENT_TIMESTAMP,
+                is_connected = 1`;
+          db.query(query, [toSessionToken, fromSessionToken], (err, results) => {
+            if (err) {
+              console.error("Hiba történt:", err);
+              return;
+            }
+            console.log("Sikeres beszúrás/frissítés:", results);
+          });       
+
+        }).catch(error => {
+          console.error("Error during getUserData operations:", error);
+        });
+      }
+    }
   });
 
   // Amikor egy kliens megszakítja a kapcsolatot
@@ -102,7 +131,111 @@ wss.on('connection', (ws, req) => {
       console.log(`User ${userId} disconnected.`);
     });
   });
+
 });
+
+function getUserData(userSession) {
+  return new Promise((resolve, reject) => {
+    console.log('getUserData:');
+    console.log(userSession);
+    const selectQuery = `SELECT u.id as id, u.email as email, u.username as username, i.image as avatar
+    FROM users as u 
+    LEFT JOIN user_sessions as s ON u.id = s.user_id 
+    LEFT JOIN user_images as i ON u.id = i.user_id AND i.category = 'avatar'     
+    WHERE s.session_token = ? ORDER BY s.id DESC LIMIT 1`;
+    db.query(selectQuery, [userSession], (err, results) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      const userData = results[0];
+      resolve({
+        userId: userData.id,
+        userSession: userSession,
+        username: userData.username,
+        avatar: userData.avatar
+      });
+    });
+  });
+}
+
+function getPartner(userSession) {
+  return new Promise((resolve, reject) => {
+    const selectQuery = `SELECT * FROM rooms as r WHERE accept = ? OR request = ? ORDER BY r.id DESC`;
+    db.query(selectQuery, [userSession, userSession], (err, results) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      if (results.length === 0) {
+        resolve(null); // Nincs találat, így visszaad null-t
+        return;
+      }
+
+      const partnerData = results[0];
+      let p = null;
+      if (partnerData.accept === userSession) {
+        p = partnerData.request;
+      } else {
+        p = partnerData.accept;
+      }
+      
+      resolve(p);
+    });
+  });
+}
+
+function sendWsMessages(messagesData = {}) {
+  Object.entries(messagesData).forEach(([key, item]) => {
+    const wsClient = clients[key];
+
+    if (wsClient && wsClient.readyState === WebSocket.OPEN)
+    {
+      wsClient.send(JSON.stringify(item));  
+    }
+  });    
+}
+
+async function handlePartnerData(userSession) {
+  try {
+    console.log('handlePartnerData');
+    // Párhuzamosan futtatjuk a getPartner és a getUserData-t
+    const partnerPromise = getPartner(userSession);
+    const userDataPromise = getUserData(userSession);
+
+    // Megvárjuk, hogy mindkettő befejeződjön
+    const [partnerSession, userData] = await Promise.all([partnerPromise, userDataPromise]);
+
+    if (partnerSession) {
+      console.log(`Partner session token: ${partnerSession}`);
+
+      if (userData) {
+        console.log('ITTTTTTTT')
+        // Ha mindkét adat megvan, akkor elküldhetjük az üzenetet
+        const messagesData = {
+          [partnerSession]: {
+            type: 'refreshJoinedPlayer',
+            message: `Refresh user(${userData.username}) data!`,
+            joinedUser: {
+              userId: userData.userId,
+              userSession: userSession,
+              username: userData.username,
+              avatar: userData.avatar
+            }
+          }
+        };
+        sendWsMessages(messagesData);
+      } else {
+        console.log('Nem sikerült lekérni a felhasználó adatait.');
+      }
+    } else {
+      console.log('Nem található partner a megadott userSession-hez.');
+    }
+  } catch (error) {
+    console.error('Hiba történt a partner vagy felhasználói adatok lekérdezésekor:', error);
+  }
+}
 
 // EXPRESS
 const app = express();
@@ -126,7 +259,7 @@ app.post('/register', (req, res) => {
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
 
-  const sql = `SELECT * FROM users WHERE email = ?`;
+  const sql = `SELECT users.id as id, users.password as password, users.email as email, users.username as username, user_images.image as avatar FROM users LEFT JOIN user_images ON users.id = user_images.user_id and user_images.category='avatar' WHERE email = ?`;
   db.query(sql, [email], (err, result) => {
     if (err) throw err;
     if (result.length === 0) {
@@ -139,23 +272,68 @@ app.post('/login', (req, res) => {
       return res.status(400).json({ message: 'Invalid email or password [2]' });
     }
       
-    // JWT token generálása
-    const token = jwt.sign({ userId: user.id, email:user.email, username:user.username  }, 'yvhtR5}#O]w7lAs', { expiresIn: '1h' });
-   
+    // JWT token generálása  
+    // const token = jwt.sign({ userId: user.id, email:user.email, username:user.username  }, 'yvhtR5}#O]w7lAs', { expiresIn: '7d' });   
+    const token = { userId: user.id, email:user.email, username:user.username  }; 
+    if (user.avatar) token.avatar = user.avatar;
     res.json({ message: 'Login successful', token });
-  
   });
+});
+
+//UPLOAD 
+const storage = multer.memoryStorage(); // Az adatokat memória tárolja
+const upload = multer({ storage: storage });
+app.post('/upload', upload.single('image'), async (req, res) => {
+  try {
+    // Ellenőrizzük, hogy a fájl tényleg létezik
+    if (!req.file) {
+      return res.status(400).send({ message: 'No file uploaded' });
+    }
+
+    // A frontendről kapott további adatokat
+    const category = req.body.category || 'avatar'; // Alapértelmezett category, ha nem lett megadva
+    const userId = req.body.id_user; // Felhasználói azonosító
+    const userSession = req.body.session_user; // Felhasználói session    
+
+    // Sharp használata a kép átméretezésére 64x64-es méretre
+    const resizedImageBuffer = await sharp(req.file.buffer)
+      .resize(64, 64)
+      .toBuffer();
+
+    // Base64 kódolás
+    const base64Image = resizedImageBuffer.toString('base64');
+
+    // Frissített SQL lekérdezés az upserthez
+    const query = `INSERT INTO user_images (user_id, category, image) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE image = VALUES(image)`;
+
+    db.query(query, [userId, category, base64Image], async (err, result) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).send({ message: 'Error saving image to database' });      
+      }
+      console.log('ezek jottek /aplod cimre:');      
+      console.log(userSession);
+      console.log(req.body);
+      if (userSession) handlePartnerData(userSession); // a partner számára elküldöm a user adatait 
+
+      res.status(200).send({ message: 'Image uploaded and saved successfully', imageId: result.insertId, base64Image: base64Image });
+    });
+  } catch (error) {
+    console.error('Error during image processing:', error);
+    res.status(500).send({ message: 'Error processing image' });
+  }
 });
 
 // Teszt API token validálással
 app.get('/hello', (req, res) => {
-  const token = req.headers['authorization'];
-  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  // const token = req.headers['authorization'];
+  // if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
-  jwt.verify(token, 'yvhtR5}#O]w7lAs', (err, decoded) => {
-    if (err) return res.status(401).json({ message: 'Invalid token' });
-    res.send('Hello World');
-  });
+  // jwt.verify(token, 'yvhtR5}#O]w7lAs', (err, decoded) => {
+  //   if (err) return res.status(401).json({ message: 'Invalid token' });
+  //   res.send('Hello World');
+  // });
+  res.send('Hello World');
 });
 
 app.listen(3000, () => {

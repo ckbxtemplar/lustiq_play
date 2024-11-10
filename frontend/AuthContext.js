@@ -5,40 +5,56 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // AuthContext létrehozása
 const AuthContext = createContext();
 
-// AuthProvider komponens, amely minden képernyőhöz hozzáférést ad az állapothoz
 export function AuthProvider({ children }) {
   const platform = (Platform.OS === 'web' ? Platform.OS : 'mobile');
   const devHost = (platform == 'web' ? 'localhost' : '10.0.2.2');
   const ws = useRef(null);
-  const [serverMessage, setServerMessage] = useState('');
 
   const [platformdata] = useState({platform:platform,devHost:devHost}); 
-  const [user, setUser] = useState(null); 
+  const [user, setUser] = useState(null);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [joinedUser, setJoinedUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false); 
+  const [gameReady, setGameReady] = useState(false);  
 
-  const logIn = async (userData) => { 
+  const logIn = async (userData) => {
     setUser(userData); 
     setLoggedIn(true); 
-    await AsyncStorage.setItem('user', JSON.stringify(userData));
+    await AsyncStorage.setItem('user', JSON.stringify(user));
   };
   const logOut = async () => { 
     setUser(null); 
+    setJoinedUser(null);
     setLoggedIn(false); 
     await AsyncStorage.removeItem('user'); 
+    await AsyncStorage.removeItem('code'); 
   }
 
+  const handleJoinGame = async (code) => {
+    const toSessionToken = code;
+    await AsyncStorage.setItem('code', code);
+    setIsLoading(true);
+  
+    ws.current.send(JSON.stringify({
+      type: 'join',
+      fromSessionToken: user.sessionToken,
+      toSessionToken: toSessionToken,
+    }));
+  };  
+
+  // START INIT
   useEffect(() => {
-    const checkUserSession = async () => {
-      const userSession = await AsyncStorage.getItem('user');
-      if (userSession) {
-        setUser(JSON.parse(userSession));
+    const checkSessions = async () => {
+      const userData = await AsyncStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
         setLoggedIn(true);
       }
     };
-    checkUserSession();
+    checkSessions();
   }, []);
 
-  // WebSocket kezelés a loggedIn állapot alapján
+  // WEBSOCKET
   useEffect(() => {
     
     if (loggedIn) {
@@ -47,44 +63,60 @@ export function AuthProvider({ children }) {
       ws.current = new WebSocket(`ws://${devHost}:8080`);
 
       ws.current.onopen = () => {
-        console.log('Connected to WS server');
-
-        // Bejelentkezési üzenet küldése a szervernek
-        ws.current.send(JSON.stringify({ type: 'hello', userId }));
+        console.log('Connected to WS server');      
+        ws.current.send(JSON.stringify({ type: 'hello', userId }));        
       };
 
-      ws.current.onmessage = (event) => {
+      ws.current.onmessage = async (event) => {
         const data = JSON.parse(event.data);
-
-        if (data.type === 'welcome') {
-          setServerMessage(data.message);
-          console.log('Message from WS server:', data.message);
-        } else if (data.type === 'notification') {
-          setServerMessage(data.message);
-          console.log('Message from WS server:', data.message);
+        if (data.type === 'welcome') 
+        {
+          const userData = { ...user }; // A user klónozása
+          userData.sessionToken = data.sessionToken;
+          setUser(userData);  // Frissítsd a user-t
+          
+          // AsyncStorage mentés az új állapot szerint
+          await AsyncStorage.setItem('user', JSON.stringify(userData));
+  
+          const code = await AsyncStorage.getItem('code');          
+          if (code && !joinedUser) {
+            handleJoinGame(code);
+          }        
+        }         
+        else if (data.type === 'join') 
+        {              
+            setJoinedUser( data.joinedUser );
+            setGameReady( data.direction );
+            console.log('Message from WS server (join):', data.message);                 
+        } 
+        else if (data.type === 'refreshJoinedPlayer') 
+          {              
+              setJoinedUser( data.joinedUser );
+              console.log('Message from WS server (refreshJoinedPlayer):', data.message);                 
+              console.log(data.joinedUser );                               
+          }         
+        else if (data.type === 'notification') 
+        {
+          console.log('Message from WS server (notification):', data.message);
+        }
+        else if (data.type === 'ack')
+        {
+          setIsLoading(false);
         }
       };
 
       ws.current.onclose = () => {
         console.log('Disconnected from WS server');
-      };
+      };      
     } else if (ws.current) {
-      // WebSocket kapcsolat bezárása, ha nincs bejelentkezés
       ws.current.close();
       ws.current = null;
     }
 
-    // Cleanup függvény a kapcsolat lezárására
-    return () => {
-      if (ws.current) {
-        ws.current.close();
-        ws.current = null;
-      }
-    };
   }, [loggedIn]); // A függvény csak akkor fut, ha a loggedIn állapot változik
 
   return (
-    <AuthContext.Provider value={{ platformdata, user, loggedIn, logIn, logOut, serverMessage, ws }}>
+    <AuthContext.Provider value={{ platformdata, user, joinedUser, loggedIn, logIn, logOut, ws, isLoading, setIsLoading, gameReady, handleJoinGame }}>
       {children}
     </AuthContext.Provider>
   );

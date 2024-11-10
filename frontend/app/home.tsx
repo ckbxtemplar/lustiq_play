@@ -1,47 +1,43 @@
-import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
+import React, {useState} from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../AuthContext';
 import { Redirect  } from 'expo-router';
 import Footer from '../components/Footer';
+import FourDigitInput from '../components/FourDigitInput';
 import globalStyles from '../styles/styles';
 import ImageLogo from '../components/ImageLogo';
 import { COLORS,RADIUS,FONT_SIZES } from '../styles/constants';
 
 const HomeScreen = () => {
-  const { loggedIn, serverMessage, user, ws } = useAuth();       
-
+  const { loggedIn, user, isLoading, handleJoinGame } = useAuth();
   if (!loggedIn) {
     return <Redirect href={'/login'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
   } 
 
-  const handleJoinGame = () => {
-    const bSessionToken = 'e47d6'; // B játékos session tokenje
-    if (ws.current && user) {
-      ws.current.send(JSON.stringify({
-        type: 'join',
-        fromUserId: user.userId,
-        toSessionToken: bSessionToken,
-      }));
-
-      console.log(`Sent join request from ${user.userId} to ${bSessionToken}`);
-    }
-  };  
+  const handleComplete = (code: string) => {
+    handleJoinGame(code);
+  };
 
   return (
     <View style={globalStyles.body}>
-      <View style={styles.container}>
-        <ImageLogo variant='light'/>        
-        <View style={styles.topBox}><Text>1</Text><Text>1</Text><Text>1</Text><Text>1</Text><Text>1</Text></View>
-        <View style={styles.circle}><Text style={{fontSize:FONT_SIZES.small}}>OR</Text></View>
-        <View style={styles.bottomBox}><Text>3</Text><Text>3</Text><Text>3</Text><Text>3</Text><Text>3</Text></View>
-        <ImageLogo variant='icon'/>
-        <Text>{serverMessage}</Text>
-        <View style={{ padding: 20 }}>
-          <Button title="Join Game" onPress={handleJoinGame} />
-        </View>        
+      <View style={globalStyles.bodyContainer}>
+        <View style={styles.container}>
+          <ImageLogo variant='light'/>        
+          <View style={styles.topBox}>
+            <Text>Your ID number for the pairing</Text>
+            <Text style={{color:'white', letterSpacing:10, fontWeight:700, fontSize:FONT_SIZES.large}}>{ user.sessionToken ? user.sessionToken : ''  }</Text>
+          </View>
+          <View style={styles.circle}><Text style={{fontSize:FONT_SIZES.small}}>OR</Text></View>
+          <View style={styles.bottomBox}>
+            <View style={{ padding: 20 }}>            
+              <FourDigitInput onComplete={handleComplete} />          
+            </View>           
+          </View>
+          <ImageLogo variant='icon' shouldRotate={ isLoading }/>  
+        </View>
+        <Footer />  
       </View>
-      <Footer />  
-    </View>
+    </View>          
   );
 };
 
@@ -50,13 +46,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding:20
+    alignSelf: 'center',
+    width: '100%'    
   },
   topBox: {
     width: '100%',
     backgroundColor: COLORS.secondary.background,
     borderRadius: RADIUS.medium,
-    paddingBottom:30,
+    paddingVertical:30,
     marginBottom:10,
     alignItems:'center'
   },
@@ -65,7 +62,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: COLORS.secondary.background,
     borderRadius: RADIUS.medium,
-    paddingTop:30,    
+    paddingVertical:30,
     marginTop:-30
   },
   circle: {

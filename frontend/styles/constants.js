@@ -16,7 +16,7 @@ export const COLORS = {
 export const FONT_SIZES = {
     small: 12,
     medium: 14,
-    large: 15,
+    large: 18,
 };
 
 export const RADIUS = {

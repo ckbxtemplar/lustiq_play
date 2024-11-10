@@ -8,12 +8,17 @@ const globalStyles = StyleSheet.create({
     justifyContent: 'center', // Középre igazítja a container-t függőlegesen
     backgroundColor: COLORS.primary.background,
   },    
-  container: { 
-    alignSelf: 'center',
+  bodyContainer:{
     flex:1,
+    alignSelf:'center',
+    width:'100%',
+    maxWidth:500,
+    padding:20
+  },
+  container: { 
+    flex:1,    
+    alignSelf: 'center',
     width: '100%',
-    maxWidth: 500,
-    padding: 30,
   },
   loginContainer:{
     alignSelf: 'center',

@@ -11,12 +11,7 @@ const FooterLogin = () => {
   return (
     <View style={styles.footerContainer}>
       <View style={styles.leftContainer}>
-        {loggedIn ? (            
-            <>
-            <Pressable onPress={logOut} style={{marginRight:20}}><Octicons name="sign-out" size={24} color="black"  style={globalStyles.colorPrimary}/></Pressable>            
-            <Text style={globalStyles.colorPrimary}>Be vagy jelentkezve <Text style={{fontWeight:'bold'}}>{user.username}</Text> !</Text>            
-            </>
-        ) : (
+        { !loggedIn && (
           <Text style={globalStyles.colorPrimary}>Nincs bejelentkezve</Text>
         )}
       </View>
@@ -33,7 +28,10 @@ const styles = StyleSheet.create({
       justifyContent: 'space-between', // Térköz a bal és jobb oldali tartalom között
       padding: 30,
       marginTop: 'auto',
-      backgroundColor: '#600F13'
+      backgroundColor: '#600F13',
+      alignSelf: 'center',
+      width: '100%',
+      maxWidth: 500,      
     },
     leftContainer: {
       flex: 1, // Bal oldal kitöltése

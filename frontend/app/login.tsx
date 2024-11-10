@@ -22,8 +22,6 @@ const LoginScreen = () => {
   const [username, setUsername] = useState(''); 
   const [message, setMessage] = useState('');  
 
-
-
   if (loggedIn) {
     return <Redirect href={'/home'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
   }  
@@ -33,7 +31,8 @@ const LoginScreen = () => {
     axios.post(`http://${devHost}:3000/login`, { email, password })
       .then(response => {
         const { token } = response.data; 
-        const decodedToken = JWT.decode(token, 'yvhtR5}#O]w7lAs');     
+        // const decodedToken = JWT.decode(token, 'yvhtR5}#O]w7lAs');     
+        const decodedToken = token;
         logIn(decodedToken);
        
         axios.get(`http://${devHost}:3000/hello`, {
@@ -48,8 +47,8 @@ const LoginScreen = () => {
         });
       })
       .catch(err => {
+        console.log(err.response || err);        
         Alert.alert('Error', 'Invalid email or password');
-        console.log(err);
       });
   };
 
