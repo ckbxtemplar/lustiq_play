@@ -42,7 +42,20 @@ export function AuthProvider({ children }) {
     }));
   };  
 
-  // START INIT
+  const startGame = () => {
+    setIsLoading(true);
+  
+    console.log("user:"+user.sessionToken);
+    console.log("joined user:"+joinedUser.userSession);  
+
+    ws.current.send(JSON.stringify({
+      type: 'start',
+      fromSessionToken: user.sessionToken,
+      toSessionToken: joinedUser.userSession,
+    }));    
+  };   
+
+  // INIT
   useEffect(() => {
     const checkSessions = async () => {
       const userData = await AsyncStorage.getItem('user');
@@ -87,18 +100,23 @@ export function AuthProvider({ children }) {
         {              
             setJoinedUser( data.joinedUser );
             setGameReady( data.direction );
+            setIsLoading(false);
             console.log('Message from WS server (join):', data.message);                 
         } 
         else if (data.type === 'refreshJoinedPlayer') 
-          {              
+        {              
               setJoinedUser( data.joinedUser );
-              console.log('Message from WS server (refreshJoinedPlayer):', data.message);                 
-              console.log(data.joinedUser );                               
-          }         
+              console.log('Message from WS server (refreshJoinedPlayer):', data.message);                        
+        }
+        else if (data.type === 'start') 
+          {
+              console.log('Message from WS server (start):', data.message);
+              setGameReady('game');
+          }                  
         else if (data.type === 'notification') 
         {
           console.log('Message from WS server (notification):', data.message);
-        }
+        }                 
         else if (data.type === 'ack')
         {
           setIsLoading(false);
@@ -116,7 +134,7 @@ export function AuthProvider({ children }) {
   }, [loggedIn]); // A függvény csak akkor fut, ha a loggedIn állapot változik
 
   return (
-    <AuthContext.Provider value={{ platformdata, user, joinedUser, loggedIn, logIn, logOut, ws, isLoading, setIsLoading, gameReady, handleJoinGame }}>
+    <AuthContext.Provider value={{ platformdata, user, joinedUser, loggedIn, logIn, logOut, ws, isLoading, setIsLoading, gameReady, handleJoinGame, setJoinedUser, setGameReady, startGame }}>
       {children}
     </AuthContext.Provider>
   );

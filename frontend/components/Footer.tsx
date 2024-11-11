@@ -8,7 +8,7 @@ import { COLORS, FONT_SIZES } from '../styles/constants';
 import BinaryImageComponent from './ImageAvatar';
  
 const Footer = () => {
-  const { loggedIn, user, joinedUser, logOut, gameReady } = useAuth();
+  const { loggedIn, user, joinedUser, logOut } = useAuth();
   const platformIconName = (Platform.OS === 'web' ? 'device-desktop' : 'device-mobile');  
   return (
     <View style={styles.footerContainer}>
@@ -22,15 +22,7 @@ const Footer = () => {
           </>
         )}
       </View>
-      <View style={styles.midContainer}>
-                 
-          <Text style={{fontSize:FONT_SIZES.small}}>
-          {
-          gameReady === "request" ? "Push the button"
-          : gameReady === "accept" ? "Waiting"
-          : ""
-          }      
-        </Text>        
+      <View style={styles.midContainer}>       
 
       </View>      
       <View style={styles.rightContainer}>

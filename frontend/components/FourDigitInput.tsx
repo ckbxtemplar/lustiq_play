@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     width:36,
     height:42,
     borderWidth: 0,
-    color: COLORS.primary.text,
+    color: 'white',
     backgroundColor: COLORS.primary.background,
     borderRadius: RADIUS.small,
     textAlign: 'center',

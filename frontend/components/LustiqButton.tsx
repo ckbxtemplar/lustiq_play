@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, StyleSheet, Pressable } from 'react-native';
 
 interface ButtonProps {
-    onPress: () => void;
+    onPress?: () => void;
     title?: string;
     variant?: 'primary' | 'secondary';
 }

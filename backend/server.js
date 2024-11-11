@@ -34,12 +34,16 @@ try {
 wss.on('connection', (ws, req) => {
   console.log('New client connected.');
   let userId = null;
+  let messagesData = {};
+  let toSessionToken = null;
+  let fromSessionToken = null; 
 
   ws.on('message', (message) => {
     const data = JSON.parse(message);
     
     // Amikor egy kliens bejelentkezik, tároljuk az SQL adatbázisban
-    if (data.type === 'hello') {       
+    if (data.type === 'hello') {   
+
       userId = data.userId;     
       const query = `INSERT INTO user_sessions (user_id, is_connected) VALUES (?, ?) ON DUPLICATE KEY UPDATE is_connected = ?, last_connected = CURRENT_TIMESTAMP`;
       db.query(query, [userId, true, true], (err, results) => {
@@ -70,12 +74,13 @@ wss.on('connection', (ws, req) => {
       });  
 
     } else if (data.type === 'join'){
-      let messagesData = {};
-      const toSessionToken = data.toSessionToken;
-      const fromSessionToken = data.fromSessionToken;      
+
+      toSessionToken = data.toSessionToken;
+      fromSessionToken = data.fromSessionToken;      
+      messagesData = {};
   
       // Ellenőrizzük, hogy van-e ilyen session_token-hez csatlakozott kliens
-      if (clients[toSessionToken] && clients[fromSessionToken] && toSessionToken && fromSessionToken) 
+      if (toSessionToken && fromSessionToken && toSessionToken != fromSessionToken && clients[toSessionToken] && clients[fromSessionToken]) 
       {
         const targetClient = clients[toSessionToken];
         const fromClient = clients[fromSessionToken];
@@ -105,16 +110,23 @@ wss.on('connection', (ws, req) => {
                 is_connected = 1`;
           db.query(query, [toSessionToken, fromSessionToken], (err, results) => {
             if (err) {
-              console.error("Hiba történt:", err);
               return;
             }
-            console.log("Sikeres beszúrás/frissítés:", results);
           });       
 
         }).catch(error => {
           console.error("Error during getUserData operations:", error);
         });
       }
+    } else if (data.type === 'start'){  
+      toSessionToken = data.toSessionToken;
+      fromSessionToken = data.fromSessionToken; 
+      messagesData = {};
+      const startData = { type: 'start',  message: `start the game`};
+      messagesData[toSessionToken] = startData;
+      messagesData[fromSessionToken] = startData;
+
+      sendWsMessages(messagesData);
     }
   });
 
@@ -136,8 +148,6 @@ wss.on('connection', (ws, req) => {
 
 function getUserData(userSession) {
   return new Promise((resolve, reject) => {
-    console.log('getUserData:');
-    console.log(userSession);
     const selectQuery = `SELECT u.id as id, u.email as email, u.username as username, i.image as avatar
     FROM users as u 
     LEFT JOIN user_sessions as s ON u.id = s.user_id 
@@ -199,7 +209,6 @@ function sendWsMessages(messagesData = {}) {
 
 async function handlePartnerData(userSession) {
   try {
-    console.log('handlePartnerData');
     // Párhuzamosan futtatjuk a getPartner és a getUserData-t
     const partnerPromise = getPartner(userSession);
     const userDataPromise = getUserData(userSession);
@@ -208,10 +217,7 @@ async function handlePartnerData(userSession) {
     const [partnerSession, userData] = await Promise.all([partnerPromise, userDataPromise]);
 
     if (partnerSession) {
-      console.log(`Partner session token: ${partnerSession}`);
-
       if (userData) {
-        console.log('ITTTTTTTT')
         // Ha mindkét adat megvan, akkor elküldhetjük az üzenetet
         const messagesData = {
           [partnerSession]: {
@@ -311,9 +317,6 @@ app.post('/upload', upload.single('image'), async (req, res) => {
         console.error('Database error:', err);
         return res.status(500).send({ message: 'Error saving image to database' });      
       }
-      console.log('ezek jottek /aplod cimre:');      
-      console.log(userSession);
-      console.log(req.body);
       if (userSession) handlePartnerData(userSession); // a partner számára elküldöm a user adatait 
 
       res.status(200).send({ message: 'Image uploaded and saved successfully', imageId: result.insertId, base64Image: base64Image });
