@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS,RADIUS,FONT_SIZES } from '../styles/constants';
+import { COLORS } from '../styles/constants';
 
 // Definiáljuk a prop típusokat a komponenshez
 interface HorizontalStepperProps {
@@ -8,7 +8,7 @@ interface HorizontalStepperProps {
 }
 
 const HorizontalStepper: React.FC<HorizontalStepperProps> = ({ totalSteps }) => {
-  const currentStep = 1; // Aktuális lépés
+  const currentStep = 0; // Aktuális lépés
   const [stepData] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]); // Lépések adatai (dinamikusan változtatható)
 
   return (
@@ -33,7 +33,6 @@ const HorizontalStepper: React.FC<HorizontalStepperProps> = ({ totalSteps }) => 
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
     width:'100%',    
@@ -53,7 +52,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     margin: 5,
-    opacity: 0.8
+    opacity: 0.5
   },
   activeStep: {
     opacity: 1,   

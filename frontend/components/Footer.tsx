@@ -17,8 +17,8 @@ const Footer = () => {
           <>          
             <BinaryImageComponent base64Image={user.avatar} isEditable={true} />
             { joinedUser && (<BinaryImageComponent base64Image={joinedUser.avatar} isEditable={false} /> )}
-            <Text style={{fontWeight:'bold', fontSize:FONT_SIZES.small, marginLeft:8}}>{user.username}</Text>
-            { joinedUser && ( <Text style={{fontSize:FONT_SIZES.small}}> & {joinedUser.username}</Text> ) }
+            <Text style={{fontSize:FONT_SIZES.small, marginLeft:8, color:'white'}}>{user.username}</Text>
+            { joinedUser && ( <Text style={{fontSize:FONT_SIZES.small, color:'white'}}> & {joinedUser.username}</Text> ) }
           </>
         )}
       </View>
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
       borderWidth:0,      
       marginTop: 'auto',
       backgroundColor: COLORS.secondary.background,
-      color: COLORS.secondary.text,
+      color: 'COLORS.secondary.text',
       alignSelf: 'center',
       width: '100%',
       maxWidth: 500,         
