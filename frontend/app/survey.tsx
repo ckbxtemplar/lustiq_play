@@ -1,5 +1,5 @@
 import React, {useState, useRef, useEffect} from 'react';
-import { View, StyleSheet, Text, Animated, Image } from 'react-native';
+import { View, StyleSheet, Text, Animated, Image, Alert } from 'react-native';
 import { useAuth } from '../AuthContext';
 import { Redirect  } from 'expo-router';
 import Footer from '../components/Footer';
@@ -7,33 +7,21 @@ import HorizontalStepper from '../components/HorizontalStepper';
 import Card from '../components/Card';
 import RadioSelect from '../components/RadioSelect';
 import ImageLogo from '../components/ImageLogo';
-import { FONT_SIZES } from '../styles/constants';
+import { COLORS, FONT_SIZES } from '../styles/constants';
 import globalStyles from '../styles/styles';
+import axios from 'axios';
 
-const GameScreen = ({  }) => {
-  const { loggedIn, isLoading, joinedUser } = useAuth();
+const SurveyScreen = ({  }) => {
+  const { user, isLoading, joinedUser, platformdata } = useAuth();   
+  const devHost = platformdata.devHost;
 
   const [totalSteps, setTotalSteps] = useState<number>(7);
   const [currentStep, setCurrentStep] = useState<number>(0);
-  type QuestionOption = {
-    id: number;
-    title: string;
-    description: string;
-    score: string;
-  };
-  
-  type Question = {
-    id: number;
-    title: string;
-    description: string;
-    type: string;
-    options?: QuestionOption[];
-  };  
-  const [questions, setQuestions] = useState<Record<number, Question>>({}); 
+  const [questions, setQuestions] = useState([]); 
+  const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [welcomeMsg, setWelcomeMsg] = useState(true);
-  const [buttonMessage, setButtonMessage] =  useState('Tovább');  
+  const [buttonMessage, setButtonMessage] =  useState('Tovább');
   const opacity = useRef(new Animated.Value(0)).current;
-
 
   useEffect(() => {
     // Animáció: opacitás felfutás 1 másodperc alatt, majd várakozás és eltűnés
@@ -59,35 +47,18 @@ const GameScreen = ({  }) => {
 
   useEffect(() => {
     const initialize = async () => {
-      const questionsData = {
-        0:{id:1,title:'Egy',description:'egy description', type:'options', options:
-          [
-           {id:1, title: '1.1 title', description: '1.1 desc', score: '6'},
-           {id:2, title: '1.2 title', description: '1.2 desc', score: '5'},
-           {id:3, title: '1.3 title', description: '1.3 desc', score: '4'},
-           {id:4, title: '1.4 title', description: '1.4 desc', score: '3'},
-           {id:5, title: '1.5 title', description: '1.5 desc', score: '2'},
-           {id:6, title: '1.6 title', description: '1.6 desc', score: '1'},                                        
-          ]
-        },
-        1:{id:3,title:'Kettő',description:'kettő description', type:'options', options:
-          [
-           {id:7, title: '2.1 title', description: '2.1 desc', score: '6'},
-           {id:8, title: '2.2 title', description: '2.2 desc', score: '5'},
-           {id:9, title: '2.3 title', description: '2.3 desc', score: '4'},
-           {id:10, title: '2.4 title', description: '2.4 desc', score: '3'},
-           {id:11, title: '2.5 title', description: '2.5 desc', score: '2'},
-           {id:12, title: '2.6 title', description: '2.6 desc', score: '1'},                                        
-          ]
-        },
-        2:{id:13,title:'Három',description:'ez csak beszélgetős', type:'talk'},
-      };      
-      setQuestions(questionsData);        
-      setTotalSteps(Object.keys(questionsData).length);
       try {
-        // például egy aszinkron adatbetöltés
-        // const data = await fetchData();
-        // console.log('Data loaded:', data);
+        axios.post(`http://${devHost}:3000/getSurvey`)
+        .then(response => {
+          const questionsData = response.data.questions;
+          setQuestions(questionsData);        
+          setTotalSteps(Object.keys(questionsData).length);         
+
+        })
+        .catch(err => {
+          console.log(err.response || err);        
+          Alert.alert('Error', 'Error get survey from backend');
+        });        
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -96,18 +67,63 @@ const GameScreen = ({  }) => {
   }, []);
 
 
-  const handleSelect = (value: string, parent: number) => {
+  const handleSelect = (value: string, parent: number) => {    
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [parent]: value,
+    }));
+
     const nextStep = currentStep + 1;
     if (questions[nextStep]){
-      console.log(value,parent);
       setCurrentStep(nextStep);
     }
-    else console.log('menthető válaszok!');
+  };
+
+  useEffect(() => {
+    if (Object.keys(answers).length >= questions.length && questions.length > 0) {
+      const wm = `Várunk ${joinedUser.username} válaszára...`;    
+      setButtonMessage(wm);
+      
+      const score = calculateTotalScore(questions,answers);
+      console.log('score:', score);
+      console.log('Menthető válaszok:', answers);
+
+      axios.post(`http://${devHost}:3000/saveSurvey`, { answers: answers, userId: user.userId })
+      .then(response => {
+        console.log(response.data);
+      })
+      .catch(err => {
+        console.log(err.response || err);        
+        Alert.alert('Error', 'Submitting the form failed.');
+      });
+    }
+  }, [answers]);  
+
+  const calculateTotalScore = (questions, answers) => {
+    let totalScore = 0;
+  
+    // Iterate through the answers
+    for (const questionId in answers) {
+      const selectedOptionId = answers[questionId];
+  
+      const question = questions.find(q => q.id === parseInt(questionId, 10));
+      if (!question) continue;
+
+      const selectedOption = question.options.find(option => option.id === parseInt(selectedOptionId,10));
+      if (!selectedOption) continue;
+
+      const score = parseInt(selectedOption.score, 10); // Convert score to a number
+      if (!isNaN(score)) {
+        totalScore += score;
+      }
+    }
+  
+    return totalScore;
   };
 
   if (!joinedUser) {
     return <Redirect href={'/lobby'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
-  }    
+  }      
 
   return (
     <View style={globalStyles.body}>
@@ -122,7 +138,8 @@ const GameScreen = ({  }) => {
                 source={require('../assets/images/lustiq_start_game.png')} // Helyettesítsd a kép útvonalával
                 resizeMode="contain" // Ezzel a kép lefedi az egész nézetet
                 />              
-              <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:40 }}>Kezdődjön a játék</Text>
+              <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:40 }}>A kaland egyensúlya</Text>
+              <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>FELMÉRÉS</Text>
             </>
           </Animated.View>
           ) : (
@@ -164,4 +181,4 @@ const styles = StyleSheet.create({
   }  
 });
 
-export default GameScreen;
+export default SurveyScreen;

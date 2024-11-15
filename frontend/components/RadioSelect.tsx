@@ -5,66 +5,77 @@ import { COLORS, FONT_SIZES } from '../styles/constants';
 import LustiqButton from '../components/LustiqButton';
 
 interface Option {
-  label: string;
-  value: string;
+  id: number;
+  title: string;
+  description: string;
+  score: string;
 }
 
 interface RadioSelectProps {
   options: Option[];
-  onSelect: (value: string) => void;
+  parent: number;
+  buttonMessage: string;
+  onSelect: (value: string, parent: number) => void;
 }
 
-const RadioSelect: React.FC<RadioSelectProps> = ({ options, onSelect }) => {
-  const [selectedValue, setSelectedValue] = useState<string | null>(null);
+const RadioSelect: React.FC<RadioSelectProps> = ({ options, parent, buttonMessage, onSelect }) => {
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [customValue, setCustomValue] = useState<string>('');
-  const [waitingMessage, setWaitingMessage] = useState('Tovább');   
-  const { joinedUser } = useAuth();    
+  // const [waitingMessage, setWaitingMessage] = useState('Tovább');
+  // const { joinedUser } = useAuth();
 
   const handleSelect = () => {
-    onSelect(selectedValue === 'custom' ? customValue : selectedValue || '');
-    const wm = "Várunk "+joinedUser.username+" válaszára...";
-    setWaitingMessage(wm);
+    const selectedOption = options.find((option) => option.id === selectedId);
+    const value = selectedOption?.score === 'custom' ? customValue : String(selectedOption?.id) || '';
+    
+    onSelect(value, parent);
   };
 
   const handleCustomChange = (text: string) => {
     setCustomValue(text);
-    setSelectedValue('custom'); // Automatikusan kijelöli a custom opciót, ha elkezdenek írni
+    const customOption = options.find((option) => option.score === 'custom');
+    if (customOption) {
+      setSelectedId(customOption.id); // Automatikusan kijelöli a custom opciót, ha elkezdenek írni
+    }
   };
 
   return (
     <View style={styles.container}>
-        <View style={styles.containerAnswers}>
+      <View style={styles.containerAnswers}>
         {options.map((option) => (
-            <View key={option.value} style={styles.optionContainer}>
+          <View key={option.id} style={styles.optionContainer}>
             <TouchableOpacity
-                style={styles.radio}
-                onPress={() => setSelectedValue(option.value)}
+              style={styles.radio}
+              onPress={() => setSelectedId(option.id)}
             >
-                <View
+              <View
                 style={[
-                    styles.radioOuter,
-                    selectedValue === option.value && styles.radioSelected,
+                  styles.radioOuter,
+                  selectedId === option.id && styles.radioSelected,
                 ]}
-                >
-                {selectedValue === option.value && <View style={styles.radioInner} />}
-                </View>
-                {option.value === 'custom' ? (
+              >
+                {selectedId === option.id && <View style={styles.radioInner} />}
+              </View>
+              {option.score === 'custom' ? (
                 <TextInput
-                    style={styles.customInput}
-                    value={customValue}
-                    onChangeText={handleCustomChange}
-                    placeholder="egyedi"
-                    placeholderTextColor="#AAA"
+                  style={styles.customInput}
+                  value={customValue}
+                  onChangeText={handleCustomChange}
+                  placeholder="egyedi"
+                  placeholderTextColor="#AAA"
                 />
-                ) : (
-                <Text style={styles.label}>{option.label}</Text>
-                )}
+              ) : (
+                <>
+                  <Text style={styles.title}>{option.title}</Text>
+                  <Text style={styles.label}>{option.description}</Text>
+                </>
+              )}
             </TouchableOpacity>
-            </View>
+          </View>
         ))}
-        </View>
+      </View>
       {/* Gomb a kiválasztott érték küldésére */}
-     <LustiqButton title={waitingMessage} onPress={handleSelect} />
+      <LustiqButton title={buttonMessage} onPress={handleSelect} />
     </View>
   );
 };
@@ -72,17 +83,16 @@ const RadioSelect: React.FC<RadioSelectProps> = ({ options, onSelect }) => {
 const styles = StyleSheet.create({
   container: {
     padding: 0,
-    width:'90%'    
+    width: '90%',
   },
-  containerAnswers: {  
-    paddingVertical:30,
+  containerAnswers: {
+    paddingVertical: 30,
   },
   optionContainer: {
-    marginVertical: 0,
+    marginVertical: 5,
   },
   radio: {
     flexDirection: 'row',
-    alignItems: 'center',
   },
   radioOuter: {
     height: 20,
@@ -91,23 +101,29 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.primary.text,
     justifyContent: 'center',
-    alignItems: 'center',
     marginRight: 10,
   },
   radioInner: {
     height: 10,
     width: 10,
+    alignSelf: 'center',
     borderRadius: 5,
     backgroundColor: COLORS.primary.text,
   },
   radioSelected: {
     borderColor: COLORS.primary.text,
   },
-  label: {
+  title: {
     fontSize: FONT_SIZES.medium,
-    color:'white',
-    minHeight:30,
-    alignContent: 'center',    
+    color: COLORS.secondary.text,
+    minHeight: 30,
+    alignContent: 'center',
+  },
+  label: {
+    fontSize: FONT_SIZES.small,
+    color: 'white',
+    minHeight: 30,
+    alignContent: 'center',
   },
   customInput: {
     borderBottomWidth: 1,
@@ -116,8 +132,8 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.medium,
     color: 'white',
     flex: 1, // Kitölti a rendelkezésre álló helyet
-    minHeight:30
-  }
+    minHeight: 30,
+  },
 });
 
 export default RadioSelect;

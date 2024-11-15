@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput } from 'react-native';
-import { Alert } from 'react-native';
+import { View, Text, TextInput, Alert } from 'react-native';
 import { useAuth } from '../AuthContext';
 import { Redirect  } from 'expo-router';
 import axios from 'axios';
@@ -12,7 +11,6 @@ import JWT from 'expo-jwt';
 
 const LoginScreen = () => {
   const { loggedIn, platformdata, logIn } = useAuth();    
-
   const [showRegistration, setShowRegistration] = useState(false);
   const devHost = platformdata.devHost;
 
@@ -21,10 +19,6 @@ const LoginScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState('');  
   const [username, setUsername] = useState(''); 
   const [message, setMessage] = useState('');  
-
-  if (loggedIn) {
-    return <Redirect href={'/home'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
-  }  
 
   // LOGIN
   const login = () => {
@@ -75,6 +69,10 @@ const LoginScreen = () => {
       console.log('Registration failed');      
     });
   };
+
+  if (loggedIn) {
+    return <Redirect href={'/home'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
+  }    
 
   return (
     <View style={globalStyles.body}>

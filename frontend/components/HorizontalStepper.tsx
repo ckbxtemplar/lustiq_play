@@ -5,10 +5,11 @@ import { COLORS } from '../styles/constants';
 // Definiáljuk a prop típusokat a komponenshez
 interface HorizontalStepperProps {
   totalSteps: number; // A teljes lépések száma
+  currentStep: number;
 }
 
-const HorizontalStepper: React.FC<HorizontalStepperProps> = ({ totalSteps }) => {
-  const currentStep = 0; // Aktuális lépés
+const HorizontalStepper: React.FC<HorizontalStepperProps> = ({ totalSteps, currentStep = 0 }) => {
+
   const [stepData] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]); // Lépések adatai (dinamikusan változtatható)
 
   return (

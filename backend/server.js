@@ -118,11 +118,11 @@ wss.on('connection', (ws, req) => {
           console.error("Error during getUserData operations:", error);
         });
       }
-    } else if (data.type === 'start'){  
+    } else if (data.type === 'startSurvey'){  
       toSessionToken = data.toSessionToken;
       fromSessionToken = data.fromSessionToken; 
       messagesData = {};
-      const startData = { type: 'start',  message: `start the game`};
+      const startData = { type: 'startSurvey',  message: `start the survey`};
       messagesData[toSessionToken] = startData;
       messagesData[fromSessionToken] = startData;
 
@@ -325,6 +325,67 @@ app.post('/upload', upload.single('image'), async (req, res) => {
     console.error('Error during image processing:', error);
     res.status(500).send({ message: 'Error processing image' });
   }
+});
+
+// Survey kérdések küldése
+app.post('/getSurvey', (req, res) => {
+  
+  const sql = `SELECT q.id as id, q.title as title, q.description as description, qo.id as o_id, qo.title as o_title, qo.description as o_description, qo.score as o_score FROM questions as q LEFT JOIN question_options as qo ON q.id = qo.question_id where q.groups = 0;`;
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.error("SQL query error:", err);
+      return;
+    }
+  
+    const formattedData = result.reduce((acc, row) => {
+      const question = acc.find((q) => q.id === row.id);
+      if (!question) {
+        acc.push({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          type: "options",
+          options: [
+            {
+              id: row.o_id,              
+              title: row.o_title,
+              description: row.o_description,
+              score: row.o_score,
+            },
+          ],
+        });
+      } else {
+        question.options.push({
+          id: row.o_id,
+          title: row.o_title,
+          description: row.o_description,
+          score: row.o_score,
+        });
+      }
+      return acc;
+    }, []);
+
+    res.status(200).json({ message: 'Get survey answers success.', questions: formattedData });         
+
+  });
+});
+
+// Survey kérdések küldése
+app.post('/saveSurvey', (req, res) => {
+  const { answers, userId } = req.body;
+
+  console.log(userId);
+  Object.keys(answers).forEach(key => {
+    console.log(`${key}: ${answers[key]}`);
+    const query = `INSERT INTO question_answers (user_id, question_id, answer) VALUES (?, ?, ?);`;
+    db.query(query, [userId, key, answers[key]], async (err, result) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).send({ message: 'Error saving image to database' });      
+      }
+    });        
+  });
+  res.status(200).json({ message: 'The form (survey) was saved successfully.', data: answers });           
 });
 
 // Teszt API token validálással

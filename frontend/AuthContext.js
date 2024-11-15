@@ -42,14 +42,25 @@ export function AuthProvider({ children }) {
     }));
   };  
 
-  const startGame = () => {
+  const startSurvey = () => {
     setIsLoading(true);
   
     console.log("user:"+user.sessionToken);
     console.log("joined user:"+joinedUser.userSession);  
 
     ws.current.send(JSON.stringify({
-      type: 'start',
+      type: 'startSurvey',
+      fromSessionToken: user.sessionToken,
+      toSessionToken: joinedUser.userSession,
+    }));    
+  };   
+
+  // még nincs meghívva sehol
+  const startGame = () => {
+    setIsLoading(true);
+
+    ws.current.send(JSON.stringify({
+      type: 'startGame',
       fromSessionToken: user.sessionToken,
       toSessionToken: joinedUser.userSession,
     }));    
@@ -108,10 +119,10 @@ export function AuthProvider({ children }) {
               setJoinedUser( data.joinedUser );
               console.log('Message from WS server (refreshJoinedPlayer):', data.message);                        
         }
-        else if (data.type === 'start') 
+        else if (data.type === 'startSurvey') 
           {
               console.log('Message from WS server (start):', data.message);
-              setGameReady('game');
+              setGameReady('survey');
           }                  
         else if (data.type === 'notification') 
         {
@@ -134,7 +145,7 @@ export function AuthProvider({ children }) {
   }, [loggedIn]); // A függvény csak akkor fut, ha a loggedIn állapot változik
 
   return (
-    <AuthContext.Provider value={{ platformdata, user, joinedUser, loggedIn, logIn, logOut, ws, isLoading, setIsLoading, gameReady, handleJoinGame, setJoinedUser, setGameReady, startGame }}>
+    <AuthContext.Provider value={{ platformdata, user, joinedUser, loggedIn, logIn, logOut, ws, isLoading, setIsLoading, gameReady, handleJoinGame, setJoinedUser, setGameReady, startSurvey }}>
       {children}
     </AuthContext.Provider>
   );
