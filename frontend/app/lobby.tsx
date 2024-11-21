@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '../AuthContext';
-import { Redirect  } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import Footer from '../components/Footer';
 import FourDigitInput from '../components/FourDigitInput';
 import LustiqButton from '../components/LustiqButton';
@@ -10,7 +10,8 @@ import ImageLogo from '../components/ImageLogo';
 import { COLORS,RADIUS,FONT_SIZES } from '../styles/constants';
 
 const LobbyScreen = () => {
-  const { loggedIn, user, joinedUser, isLoading, handleJoinGame, gameReady, setJoinedUser, setGameReady, startSurvey } = useAuth();
+  const router = useRouter(); 
+  const { loggedIn, user, joinedUser, isLoading, handleJoinGame, setJoinedUser, gameReady, setGameReady } = useAuth();
 
   const handleComplete = (code: string) => {
     handleJoinGame(code);
@@ -46,10 +47,10 @@ const LobbyScreen = () => {
 
                 {joinedUser ? (
                   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                    {gameReady === "request" ? (
+                    {gameReady === "request" || gameReady === "accept"  ? (
                       <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ marginBottom: 10 }}>Push the button to start the journey.</Text>
-                        <LustiqButton title="LET'S PLAY" onPress={startSurvey}  />
+                        <Text style={{ marginBottom: 10 }}>Push the button to start the survey.</Text>
+                        <LustiqButton title="LET'S START SURVEY" onPress={() => router.push('/survey')}  />
                       </View>
                     ) : gameReady === "accept" ? (
                       <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>

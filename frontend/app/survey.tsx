@@ -1,49 +1,97 @@
 import React, {useState, useRef, useEffect} from 'react';
 import { View, StyleSheet, Text, Animated, Image, Alert } from 'react-native';
 import { useAuth } from '../AuthContext';
-import { Redirect  } from 'expo-router';
+import { Redirect, useRouter  } from 'expo-router';
 import Footer from '../components/Footer';
 import HorizontalStepper from '../components/HorizontalStepper';
 import Card from '../components/Card';
 import RadioSelect from '../components/RadioSelect';
 import ImageLogo from '../components/ImageLogo';
 import { COLORS, FONT_SIZES } from '../styles/constants';
+import LustiqButton from '../components/LustiqButton';
 import globalStyles from '../styles/styles';
 import axios from 'axios';
 
 const SurveyScreen = ({  }) => {
-  const { user, isLoading, joinedUser, platformdata } = useAuth();   
+  const { user, isLoading, joinedUser, platformdata, startGame, gameReady, opponentStatus, gameProps } = useAuth();   
   const devHost = platformdata.devHost;
+  const router = useRouter();
 
   const [totalSteps, setTotalSteps] = useState<number>(7);
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const [score, setScore] = useState<number>(0);  
   const [questions, setQuestions] = useState([]); 
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
-  const [welcomeMsg, setWelcomeMsg] = useState(true);
-  const [buttonMessage, setButtonMessage] =  useState('Tovább');
+  const [surveyStatus, setSurveyStatus] = useState('start');
+  const [buttonMessage] =  useState('Tovább');
+  const [showMessage, setShowMessage] = useState(false);
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Animáció: opacitás felfutás 1 másodperc alatt, majd várakozás és eltűnés
-    Animated.sequence([
-      Animated.delay(500),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 2000,
-        useNativeDriver: false,
-      }),
-      Animated.delay(2100), // 2 másodpercig marad látható
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 1000,
-        useNativeDriver: false,
-      }),
-      Animated.delay(500),
-    ]).start(() => {
-      // Animáció végén meghívódik a megadott függvény
-      setWelcomeMsg(false);
-    });
-  }, [opacity]);
+    if (surveyStatus === 'start') {
+      // Start fázis animáció
+      Animated.sequence([
+        Animated.delay(500),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+        Animated.delay(2000),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: false,
+        }),
+        Animated.delay(500),
+      ]).start(() => {
+        setSurveyStatus('survey'); // Tovább a következő fázisra
+      });
+    } else if (surveyStatus === 'survey') {
+      // Survey fázis animáció
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    } else if (surveyStatus === 'end') {
+      // End fázis animáció
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    }
+  }, [surveyStatus]);
+
+  const hasAnimated = useRef(false); 
+  useEffect(() => {
+    if (gameReady === 'readyToPlay' && opponentStatus === 'readyToPlay' && !hasAnimated.current) {
+      hasAnimated.current = true;      
+      setShowMessage(true); // Aktiválja az üzenet megjelenítését
+      // Animáció: megjelenítés
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+        Animated.delay(2500), 
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+      ]).start(() => {
+        hasAnimated.current = false;
+        router.push('/game'); // Átirányítás az animáció után
+      });
+    }
+  }, [gameReady, opponentStatus]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -81,14 +129,21 @@ const SurveyScreen = ({  }) => {
 
   useEffect(() => {
     if (Object.keys(answers).length >= questions.length && questions.length > 0) {
-      const wm = `Várunk ${joinedUser.username} válaszára...`;    
-      setButtonMessage(wm);
-      
-      const score = calculateTotalScore(questions,answers);
-      console.log('score:', score);
-      console.log('Menthető válaszok:', answers);
 
-      axios.post(`http://${devHost}:3000/saveSurvey`, { answers: answers, userId: user.userId })
+      // const wm = `Várunk ${joinedUser.username} válaszára...`;    
+      // setButtonMessage(wm);      
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: false,
+      }).start(() => {
+        setSurveyStatus('end');
+      });
+
+      
+      const totalScore = calculateTotalScore(questions,answers);
+      setScore(totalScore);
+      axios.post(`http://${devHost}:3000/saveAnswers`, { answers: answers, userId: user.userId, room:gameProps.room })
       .then(response => {
         console.log(response.data);
       })
@@ -112,9 +167,9 @@ const SurveyScreen = ({  }) => {
       const selectedOption = question.options.find(option => option.id === parseInt(selectedOptionId,10));
       if (!selectedOption) continue;
 
-      const score = parseInt(selectedOption.score, 10); // Convert score to a number
-      if (!isNaN(score)) {
-        totalScore += score;
+      const sc = parseInt(selectedOption.score, 10); // Convert score to a number
+      if (!isNaN(sc)) {
+        totalScore += sc;
       }
     }
   
@@ -131,31 +186,55 @@ const SurveyScreen = ({  }) => {
         
         <View style={styles.container}>
           <HorizontalStepper totalSteps={totalSteps} currentStep={currentStep} />
-          { welcomeMsg ? (
+          { surveyStatus === 'start' ? (
           <Animated.View style={[styles.animatedBox, { opacity }]}>
             <>
               <Image 
                 source={require('../assets/images/lustiq_start_game.png')} // Helyettesítsd a kép útvonalával
                 resizeMode="contain" // Ezzel a kép lefedi az egész nézetet
                 />              
-              <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:40 }}>A kaland egyensúlya</Text>
+              <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:40 }}>Az egyensúly megtalálása</Text>
               <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>FELMÉRÉS</Text>
             </>
           </Animated.View>
-          ) : (
-            <View style={styles.container}>
-              { questions[currentStep] ? (
-              <>
-                <Card 
-                  title={questions[currentStep].title}
-                  description={questions[currentStep].description}
-                />
-                <RadioSelect options={questions[currentStep].options || []} parent={questions[currentStep].id} buttonMessage={buttonMessage} onSelect={handleSelect} />
-              </>              
-               ) : (<Text>No data</Text>)}
-            </View>
-          ) }             
-          <ImageLogo variant='icon' shouldRotate={ isLoading }/>  
+          ) : surveyStatus === 'survey' ? (
+            <Animated.View style={[styles.animatedBox, { opacity }]}>            
+              <View style={styles.container}>
+                { questions[currentStep] ? (
+                <>
+                  <Card 
+                    title={questions[currentStep].title}
+                    description={questions[currentStep].description}
+                  />
+                  <RadioSelect options={questions[currentStep].options || []} parent={questions[currentStep].id} buttonMessage={buttonMessage} onSelect={handleSelect} />
+                </>              
+                  ) : (<Text>No data</Text>)}
+              </View>
+            </Animated.View>            
+          ) : surveyStatus === 'end' ? (
+            <Animated.View style={[styles.animatedBox, { opacity }]}>
+            <>
+              <Image 
+                source={require('../assets/images/lustiq_start_game.png')} // Helyettesítsd a kép útvonalával
+                resizeMode="contain" // Ezzel a kép lefedi az egész nézetet
+                />              
+              <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:40, marginBottom:10, textAlign:'center' }}>Köszönjük a válaszokat!</Text>
+              <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:20, marginBottom:10, textAlign:'center' }}>Kattints a gombra, ha készen állsz az élményre.</Text>              
+              { !showMessage ? (                
+                <LustiqButton title="LET'S PLAY" onPress={startGame}  />        
+              ):(
+                <Animated.View style={{ opacity }}>
+                  <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>Kezeket a paplan fölé...</Text>
+                </Animated.View>
+              )}
+              <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>Mi státuszunk: {gameReady}</Text>
+              <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>Enemy státusza: {opponentStatus}</Text>                            
+              <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>{score}</Text>
+            </>
+            </Animated.View>              
+          ) : null 
+          }             
+          <ImageLogo variant='icon' shouldRotate={ isLoading }/>
         </View>           
         <Footer />  
 

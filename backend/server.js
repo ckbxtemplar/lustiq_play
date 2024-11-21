@@ -40,7 +40,7 @@ wss.on('connection', (ws, req) => {
 
   ws.on('message', (message) => {
     const data = JSON.parse(message);
-    
+    messagesData = {};    
     // Amikor egy kliens bejelentkezik, tároljuk az SQL adatbázisban
     if (data.type === 'hello') {   
 
@@ -77,43 +77,50 @@ wss.on('connection', (ws, req) => {
 
       toSessionToken = data.toSessionToken;
       fromSessionToken = data.fromSessionToken;      
-      messagesData = {};
   
       // Ellenőrizzük, hogy van-e ilyen session_token-hez csatlakozott kliens
       if (toSessionToken && fromSessionToken && toSessionToken != fromSessionToken && clients[toSessionToken] && clients[fromSessionToken]) 
       {
         const targetClient = clients[toSessionToken];
         const fromClient = clients[fromSessionToken];
-
-        const directions  = {
-          "request":{token: fromSessionToken, to:toSessionToken, client:targetClient}, 
-          "accept":{token: toSessionToken, to:fromSessionToken, client:fromClient}
+        
+        const directions = {
+          "request": { token: fromSessionToken, to: toSessionToken, client: targetClient },
+          "accept": { token: toSessionToken, to: fromSessionToken, client: fromClient }
         };
-
+        
         const queryPromises = Object.entries(directions).map(async ([key, item]) => {
           const userData = await getUserData(item.token);
           messagesData[item.to] = {
             type: 'join',
             message: `${userData.username} has joined the game!`,
             direction: key,
-            joinedUser: { userId: userData.userId, userSession: item.token, username: userData.username, avatar:userData.avatar }
+            joinedUser: { userId: userData.userId, userSession: item.token, username: userData.username, avatar: userData.avatar }
           };
-        }); 
-
+        });
+        
         Promise.all(queryPromises).then(() => {
-          sendWsMessages(messagesData);
-
-          const query = `INSERT INTO rooms (accept, request, is_connected) 
+          const query = `
+            INSERT INTO rooms (accept, request, is_connected) 
             VALUES (?, ?, 1)
             ON DUPLICATE KEY UPDATE 
                 last_connected = CURRENT_TIMESTAMP,
                 is_connected = 1`;
+        
           db.query(query, [toSessionToken, fromSessionToken], (err, results) => {
             if (err) {
+              console.error("Database error:", err);
               return;
             }
-          });       
-
+        
+            const roomId = results.insertId || results[0]?.id;
+        
+            Object.values(messagesData).forEach(message => {
+              message.room = roomId;
+            });
+        
+            sendWsMessages(messagesData);
+          });
         }).catch(error => {
           console.error("Error during getUserData operations:", error);
         });
@@ -121,13 +128,25 @@ wss.on('connection', (ws, req) => {
     } else if (data.type === 'startSurvey'){  
       toSessionToken = data.toSessionToken;
       fromSessionToken = data.fromSessionToken; 
-      messagesData = {};
       const startData = { type: 'startSurvey',  message: `start the survey`};
       messagesData[toSessionToken] = startData;
       messagesData[fromSessionToken] = startData;
-
+      sendWsMessages(messagesData);
+    } else if (data.type === 'readyToPlay'){
+      toSessionToken = data.toSessionToken;   
+      fromSessionToken = data.fromSessionToken;    
+      const startData = { type: 'readyToPlay',  message: `ready to play (${fromSessionToken})`, fromSessionToken:fromSessionToken };
+      messagesData[toSessionToken] = startData;
+      sendWsMessages(messagesData);
+    } else if (data.type === 'readyToNextQuestion'){
+      toSessionToken = data.toSessionToken;   
+      fromSessionToken = data.fromSessionToken;    
+      const startData = { type: 'readyToNextQuestion',  message: `ready to the next question (${fromSessionToken})`, fromSessionToken:fromSessionToken };
+      messagesData[toSessionToken] = startData;
       sendWsMessages(messagesData);
     }
+    
+
   });
 
   // Amikor egy kliens megszakítja a kapcsolatot
@@ -365,27 +384,132 @@ app.post('/getSurvey', (req, res) => {
       return acc;
     }, []);
 
-    res.status(200).json({ message: 'Get survey answers success.', questions: formattedData });         
+    res.status(200).json({ message: 'Get survey questions success.', questions: formattedData });         
 
   });
 });
 
-// Survey kérdések küldése
-app.post('/saveSurvey', (req, res) => {
-  const { answers, userId } = req.body;
 
-  console.log(userId);
-  Object.keys(answers).forEach(key => {
-    console.log(`${key}: ${answers[key]}`);
-    const query = `INSERT INTO question_answers (user_id, question_id, answer) VALUES (?, ?, ?);`;
-    db.query(query, [userId, key, answers[key]], async (err, result) => {
-      if (err) {
-        console.error('Database error:', err);
-        return res.status(500).send({ message: 'Error saving image to database' });      
+const roomQuestions = {};
+// Kérdések küldése
+app.post('/getQuestions', (req, res) => {
+  let level = 0;
+  let sql = "";
+  let finalQuestionIds = {};
+  const { room } = req.body;  
+  sql = `SELECT a.user_id,SUM(o.score) as score FROM lustiq_play.question_answers as a
+    left join question_options as o ON a.answer = o.id
+    where a.room_id = ? GROUP BY a.user_id
+    ORDER BY SUM(o.score) ASC;`;
+  db.query(sql, [room], (err, results) => {
+    if (err) {
+      console.error("SQL query error:", err);
+      return;
+    }
+    if (!results || results.length === 0) {
+      console.warn(`No results found for the query (getQuestions, room:${room}).`);
+      return;
+    }    
+    const minScore = results[0].score;
+
+    if (minScore < 11)  level = 1;
+    else if( minScore < 21) level = 2;
+    else level = 3;
+
+    if (roomQuestions[room]) {      
+      finalQuestionIds = roomQuestions[room];
+    } else {
+      let def_question_ids = [44, 45, 47];
+      let question_ids = [];
+      
+      switch (level) {
+        case 3:
+          question_ids = [...question_ids, 74, 75, 76, 77, 79, 80];
+        case 2:
+          question_ids = [...question_ids, 62, 63, 65, 66, 67, 69, 70, 71, 72, 73];
+        case 1:
+          question_ids = [...question_ids, 48, 50, 52, 54, 56, 58, 60];
+          break;
       }
+      // Véletlenszerű 6 elem kiválasztása a question_ids tömbből
+      function getRandomElements(array, count) {
+        const shuffled = array.slice(); // Másolatot készítünk az eredeti tömbről
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1)); // Véletlen index
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; // Csere
+        }
+        return shuffled.slice(0, count); // Az első `count` elemet visszaadjuk
+      }
+      const selectedQuestions = getRandomElements(question_ids, 4);
+      finalQuestionIds = [...selectedQuestions, ...def_question_ids];
+      roomQuestions[room] = finalQuestionIds;
+    }
+
+    const placeholders = finalQuestionIds.map(() => '?').join(',');
+    sql = `SELECT q.id as id, q.title as title, q.description as description, qo.id as o_id, qo.title as o_title, qo.description as o_description, q.type as type
+      FROM questions as q 
+      LEFT JOIN question_options as qo ON q.id = qo.question_id 
+      where (q.id IN (${placeholders}) OR q.parent IN (${placeholders}));`;
+    db.query(sql, [...finalQuestionIds, ...finalQuestionIds], (err, results) => {
+      if (err) {
+        console.error("SQL query error:", err);
+        return;
+      }
+      if (!results || results.length === 0) {
+        console.warn(`No results found for the query (getQuestions, room:${room}).`);
+        return;
+      } 
+
+      const formattedData = results.reduce((acc, row) => {
+        const question = acc.find((q) => q.id === row.id);
+        
+        const option = row.o_id ? { // Csak akkor hozunk létre opciót, ha az o_id létezik
+          id: row.o_id,
+          title: row.o_title,
+          description: row.o_description,
+        } : null;
+      
+        if (!question) {
+          acc.push({
+            id: row.id,
+            title: row.title,
+            description: row.description,
+            type: row.type,
+            options: option ? [option] : [], // Ha nincs opció, üres tömböt adunk
+          });
+        } else if (option) {
+          question.options.push(option); // Csak érvényes opciót adunk hozzá
+        }
+      
+        return acc;
+      }, []);
+  
+      res.status(200).json({ message: 'Get questions success.', questions: formattedData, score: minScore, level: level });
     });        
+
   });
-  res.status(200).json({ message: 'The form (survey) was saved successfully.', data: answers });           
+});
+
+// Kérdések mentése
+app.post('/saveAnswers', (req, res) => {
+  const { answers, userId, room } = req.body;
+  const query = `
+  INSERT INTO question_answers (user_id, room_id, question_id, answer) 
+  VALUES (?, ?, ?, ?)
+  ON DUPLICATE KEY UPDATE answer = VALUES(answer);`;
+
+  Object.keys(answers).forEach(key => {
+    if (answers[key] !== "undefined")
+    {
+      db.query(query, [userId, room, key, answers[key]], (err, result) => {
+        if (err) {
+          console.error('Database error:', err);
+          return res.status(500).send({ message: 'Error saving image to database' });      
+        }
+      });        
+    }
+  });
+  res.status(200).json({ message: 'The form was saved successfully.', data: answers });           
 });
 
 // Teszt API token validálással

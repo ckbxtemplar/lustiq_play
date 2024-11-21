@@ -16,6 +16,8 @@ export function AuthProvider({ children }) {
   const [joinedUser, setJoinedUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false); 
   const [gameReady, setGameReady] = useState(false);  
+  const [opponentStatus, setOpponentStatus] = useState('pending');    
+  const [gameProps, setGameProps] = useState({});     
 
   const logIn = async (userData) => {
     setUser(userData); 
@@ -42,29 +44,30 @@ export function AuthProvider({ children }) {
     }));
   };  
 
-  const startSurvey = () => {
+  const startGame = () => {
     setIsLoading(true);
+    setGameReady('readyToPlay');
   
     console.log("user:"+user.sessionToken);
     console.log("joined user:"+joinedUser.userSession);  
 
     ws.current.send(JSON.stringify({
-      type: 'startSurvey',
+      type: 'readyToPlay',      
       fromSessionToken: user.sessionToken,
       toSessionToken: joinedUser.userSession,
     }));    
   };   
 
-  // még nincs meghívva sehol
-  const startGame = () => {
+  const readyToNextQuestion = () => {
     setIsLoading(true);
-
+    setGameReady('readyToNextQuestion');
     ws.current.send(JSON.stringify({
-      type: 'startGame',
+      type: 'readyToNextQuestion',      
       fromSessionToken: user.sessionToken,
       toSessionToken: joinedUser.userSession,
     }));    
-  };   
+  };     
+  
 
   // INIT
   useEffect(() => {
@@ -112,18 +115,27 @@ export function AuthProvider({ children }) {
             setJoinedUser( data.joinedUser );
             setGameReady( data.direction );
             setIsLoading(false);
+            
+            const gameP = gameProps;
+            gameP.room = data.room;
+            setGameProps(gameP);
             console.log('Message from WS server (join):', data.message);                 
         } 
         else if (data.type === 'refreshJoinedPlayer') 
         {              
-              setJoinedUser( data.joinedUser );
-              console.log('Message from WS server (refreshJoinedPlayer):', data.message);                        
+            setJoinedUser( data.joinedUser );
+            console.log('Message from WS server (refreshJoinedPlayer):', data.message);                        
         }
-        else if (data.type === 'startSurvey') 
+        else if (data.type === 'readyToPlay') 
+        {
+          setOpponentStatus('readyToPlay');
+          console.log('Message from WS server (readyToPlay):', data.message);                        
+        }
+        else if (data.type === 'readyToNextQuestion') 
           {
-              console.log('Message from WS server (start):', data.message);
-              setGameReady('survey');
-          }                  
+            setOpponentStatus('readyToNextQuestion');
+            console.log('Message from WS server (readyToNextQuestion):', data.message);                        
+          }                         
         else if (data.type === 'notification') 
         {
           console.log('Message from WS server (notification):', data.message);
@@ -145,7 +157,7 @@ export function AuthProvider({ children }) {
   }, [loggedIn]); // A függvény csak akkor fut, ha a loggedIn állapot változik
 
   return (
-    <AuthContext.Provider value={{ platformdata, user, joinedUser, loggedIn, logIn, logOut, ws, isLoading, setIsLoading, gameReady, handleJoinGame, setJoinedUser, setGameReady, startSurvey }}>
+    <AuthContext.Provider value={{ platformdata, user, joinedUser, loggedIn, logIn, logOut, ws, isLoading, setIsLoading, gameReady, handleJoinGame, setJoinedUser, setGameReady, startGame, opponentStatus, setOpponentStatus, gameProps, setGameProps, readyToNextQuestion }}>
       {children}
     </AuthContext.Provider>
   );

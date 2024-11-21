@@ -1,5 +1,5 @@
 import React, {useState, useRef, useEffect} from 'react';
-import { View, StyleSheet, Text, Animated, Image } from 'react-native';
+import { View, StyleSheet, Text, Animated, Image, Alert } from 'react-native';
 import { useAuth } from '../AuthContext';
 import { Redirect  } from 'expo-router';
 import Footer from '../components/Footer';
@@ -9,12 +9,14 @@ import RadioSelect from '../components/RadioSelect';
 import ImageLogo from '../components/ImageLogo';
 import { FONT_SIZES } from '../styles/constants';
 import globalStyles from '../styles/styles';
+import axios from 'axios';
 
 const GameScreen = ({  }) => {
-  const { loggedIn, isLoading, joinedUser } = useAuth();
+  const { user, platformdata, isLoading, joinedUser, gameReady, setGameReady, opponentStatus, setOpponentStatus, gameProps, readyToNextQuestion } = useAuth();
 
   const [totalSteps, setTotalSteps] = useState<number>(7);
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const devHost = platformdata.devHost;  
   type QuestionOption = {
     id: number;
     title: string;
@@ -29,65 +31,82 @@ const GameScreen = ({  }) => {
     type: string;
     options?: QuestionOption[];
   };  
-  const [questions, setQuestions] = useState<Record<number, Question>>({}); 
+  const [questions, setQuestions] = useState([]); 
+  const [answers, setAnswers] = useState<{ [key: string]: string }>({});
+  const [answersStatus, setanswersStatus] = useState('start');
   const [welcomeMsg, setWelcomeMsg] = useState(true);
   const [buttonMessage, setButtonMessage] =  useState('Tovább');  
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [disabledButton, setDisabledButton] = useState(false);
+  const welcomeOpacity = useRef(new Animated.Value(0)).current;  
+  const opacity = useRef(new Animated.Value(1)).current;
 
 
   useEffect(() => {
-    // Animáció: opacitás felfutás 1 másodperc alatt, majd várakozás és eltűnés
     Animated.sequence([
-      Animated.delay(500),
-      Animated.timing(opacity, {
+      Animated.delay(300),
+      Animated.timing(welcomeOpacity, {
         toValue: 1,
-        duration: 2000,
+        duration: 1000,
         useNativeDriver: false,
       }),
-      Animated.delay(2100), // 2 másodpercig marad látható
-      Animated.timing(opacity, {
+      Animated.delay(2000), // 2 másodpercig marad látható
+      Animated.timing(welcomeOpacity, {
         toValue: 0,
         duration: 1000,
         useNativeDriver: false,
       }),
-      Animated.delay(500),
+      Animated.delay(300),
     ]).start(() => {
       // Animáció végén meghívódik a megadott függvény
       setWelcomeMsg(false);
     });
-  }, [opacity]);
+  }, [welcomeOpacity]);
+
+  const hasAnimated = useRef(false);  
+  useEffect(() => {
+    if (gameReady === 'readyToNextQuestion' && opponentStatus === 'readyToNextQuestion' && !hasAnimated.current) {
+      hasAnimated.current = true;
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: false,
+      }).start(() => {
+        // Ha eltűnt, frissítjük az állapotokat
+        const nextStep = currentStep + 1;
+        if (questions[nextStep]) {
+          setCurrentStep(nextStep);
+        } else {
+          // Nincs több kérdés, jöhet a lezárás
+        }
+        setOpponentStatus('pending');
+        setGameReady(false);
+        setDisabledButton(false);        
+
+        setTimeout(() => {
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: false,
+          }).start( () => { hasAnimated.current = false; });
+        }, 300); // Késleltetés 300ms
+      });
+    }
+  }, [gameReady, opponentStatus]);
 
   useEffect(() => {
     const initialize = async () => {
-      const questionsData = {
-        0:{id:1,title:'Egy',description:'egy description', type:'options', options:
-          [
-           {id:1, title: '1.1 title', description: '1.1 desc', score: '6'},
-           {id:2, title: '1.2 title', description: '1.2 desc', score: '5'},
-           {id:3, title: '1.3 title', description: '1.3 desc', score: '4'},
-           {id:4, title: '1.4 title', description: '1.4 desc', score: '3'},
-           {id:5, title: '1.5 title', description: '1.5 desc', score: '2'},
-           {id:6, title: '1.6 title', description: '1.6 desc', score: '1'},                                        
-          ]
-        },
-        1:{id:3,title:'Kettő',description:'kettő description', type:'options', options:
-          [
-           {id:7, title: '2.1 title', description: '2.1 desc', score: '6'},
-           {id:8, title: '2.2 title', description: '2.2 desc', score: '5'},
-           {id:9, title: '2.3 title', description: '2.3 desc', score: '4'},
-           {id:10, title: '2.4 title', description: '2.4 desc', score: '3'},
-           {id:11, title: '2.5 title', description: '2.5 desc', score: '2'},
-           {id:12, title: '2.6 title', description: '2.6 desc', score: '1'},                                        
-          ]
-        },
-        2:{id:13,title:'Három',description:'ez csak beszélgetős', type:'talk'},
-      };      
-      setQuestions(questionsData);        
-      setTotalSteps(Object.keys(questionsData).length);
       try {
-        // például egy aszinkron adatbetöltés
-        // const data = await fetchData();
-        // console.log('Data loaded:', data);
+        axios.post(`http://${devHost}:3000/getQuestions`,{ room:gameProps.room })
+        .then(response => {
+          const minScore = response.data.score;
+          const questionsData = response.data.questions;
+          setQuestions(questionsData);        
+          setTotalSteps(Object.keys(questionsData).length); 
+        })
+        .catch(err => {
+          console.log(err.response || err);        
+          Alert.alert('Error', 'Error get questions from backend');
+        });        
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -95,15 +114,36 @@ const GameScreen = ({  }) => {
     initialize();
   }, []);
 
-
   const handleSelect = (value: string, parent: number) => {
-    const nextStep = currentStep + 1;
-    if (questions[nextStep]){
-      console.log(value,parent);
-      setCurrentStep(nextStep);
-    }
-    else console.log('menthető válaszok!');
+    setDisabledButton(true);    
+    setAnswers((prevAnswers) => ({
+      ...prevAnswers,
+      [parent]: value,
+    }));
+    readyToNextQuestion();
   };
+
+  useEffect(() => {
+    if (Object.keys(answers).length >= questions.length && questions.length > 0) {
+     
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: false,
+      }).start(() => {
+        setanswersStatus('end');
+      });
+
+      axios.post(`http://${devHost}:3000/saveAnswers`, { answers: answers, userId: user.userId, room:gameProps.room })
+      .then(response => {
+        console.log(response.data);
+      })
+      .catch(err => {
+        console.log(err.response || err);        
+        Alert.alert('Error', 'Submitting the form failed.');
+      });
+    }
+  }, [answers]);    
 
   if (!joinedUser) {
     return <Redirect href={'/lobby'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
@@ -116,7 +156,7 @@ const GameScreen = ({  }) => {
         <View style={styles.container}>
           <HorizontalStepper totalSteps={totalSteps} currentStep={currentStep} />
           { welcomeMsg ? (
-          <Animated.View style={[styles.animatedBox, { opacity }]}>
+          <Animated.View style={[styles.animatedBox, { opacity: welcomeOpacity }]}>
             <>
               <Image 
                 source={require('../assets/images/lustiq_start_game.png')} // Helyettesítsd a kép útvonalával
@@ -126,22 +166,23 @@ const GameScreen = ({  }) => {
             </>
           </Animated.View>
           ) : (
-            <View style={styles.container}>
-              { questions[currentStep] ? (
-              <>
-                <Card 
-                  title={questions[currentStep].title}
-                  description={questions[currentStep].description}
-                />
-                <RadioSelect options={questions[currentStep].options || []} parent={questions[currentStep].id} buttonMessage={buttonMessage} onSelect={handleSelect} />
-              </>              
-               ) : (<Text>No data</Text>)}
-            </View>
+            <Animated.View style={[styles.animatedBox, { opacity: opacity }]}>
+              <View style={styles.container}>
+                { questions[currentStep] ? (
+                <>
+                  <Card 
+                    title={questions[currentStep].title}
+                    description={questions[currentStep].description}
+                  />
+                  <RadioSelect options={questions[currentStep].options || []} parent={questions[currentStep].id} type={questions[currentStep].type || 'unknown'} disabled={disabledButton}  buttonMessage={buttonMessage} onSelect={handleSelect} />
+                </>              
+                ) : (<Text>No data</Text>)}
+              </View>
+            </Animated.View>
           ) }             
           <ImageLogo variant='icon' shouldRotate={ isLoading }/>  
-        </View>           
+        </View>     
         <Footer />  
-
       </View>
     </View>          
   );

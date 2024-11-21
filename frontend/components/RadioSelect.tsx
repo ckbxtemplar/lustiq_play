@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { useAuth } from '../AuthContext';
 import { COLORS, FONT_SIZES } from '../styles/constants';
 import LustiqButton from '../components/LustiqButton';
 
@@ -14,26 +13,30 @@ interface Option {
 interface RadioSelectProps {
   options: Option[];
   parent: number;
+  type: string;
+  disabled?: boolean;
   buttonMessage: string;
   onSelect: (value: string, parent: number) => void;
 }
 
-const RadioSelect: React.FC<RadioSelectProps> = ({ options, parent, buttonMessage, onSelect }) => {
+const RadioSelect: React.FC<RadioSelectProps> = ({ options, parent, type, disabled, buttonMessage, onSelect }) => {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [customValue, setCustomValue] = useState<string>('');
-  // const [waitingMessage, setWaitingMessage] = useState('Tovább');
-  // const { joinedUser } = useAuth();
+  
+
+  const extendedOptions = type === 'optionsAndCustom'
+    ? [...options, { id: 0, title: 'Egyedi érték', description: '', score: 'custom' }]
+    : options;
 
   const handleSelect = () => {
-    const selectedOption = options.find((option) => option.id === selectedId);
+    const selectedOption = extendedOptions.find((option) => option.id === selectedId);
     const value = selectedOption?.score === 'custom' ? customValue : String(selectedOption?.id) || '';
-    
     onSelect(value, parent);
   };
 
   const handleCustomChange = (text: string) => {
     setCustomValue(text);
-    const customOption = options.find((option) => option.score === 'custom');
+    const customOption = extendedOptions.find((option) => option.score === 'custom');
     if (customOption) {
       setSelectedId(customOption.id); // Automatikusan kijelöli a custom opciót, ha elkezdenek írni
     }
@@ -42,7 +45,7 @@ const RadioSelect: React.FC<RadioSelectProps> = ({ options, parent, buttonMessag
   return (
     <View style={styles.container}>
       <View style={styles.containerAnswers}>
-        {options.map((option) => (
+        {extendedOptions.map((option) => (
           <View key={option.id} style={styles.optionContainer}>
             <TouchableOpacity
               style={styles.radio}
@@ -66,16 +69,17 @@ const RadioSelect: React.FC<RadioSelectProps> = ({ options, parent, buttonMessag
                 />
               ) : (
                 <>
-                  <Text style={styles.title}>{option.title}</Text>
-                  <Text style={styles.label}>{option.description}</Text>
+                  { option.title && <Text style={styles.title}>{option.title}</Text> }
+                  { option.description && <Text style={styles.label}>{option.description}</Text> }
                 </>
               )}
             </TouchableOpacity>
           </View>
         ))}
+        { type === 'talk' && <Text>Beszélgessetek</Text>}
       </View>
       {/* Gomb a kiválasztott érték küldésére */}
-      <LustiqButton title={buttonMessage} onPress={handleSelect} />
+      <LustiqButton title={buttonMessage} disabled={disabled} onPress={handleSelect} />
     </View>
   );
 };
@@ -90,6 +94,8 @@ const styles = StyleSheet.create({
   },
   optionContainer: {
     marginVertical: 5,
+    alignSelf: 'flex-start',
+    alignContent: 'center'    
   },
   radio: {
     flexDirection: 'row',
@@ -102,6 +108,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary.text,
     justifyContent: 'center',
     marginRight: 10,
+    marginTop:4
   },
   radioInner: {
     height: 10,
@@ -130,9 +137,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary.text,
     paddingVertical: 5,
     fontSize: FONT_SIZES.medium,
-    color: 'white',
-    flex: 1, // Kitölti a rendelkezésre álló helyet
-    minHeight: 30,
+    color: 'white',    
+    height:28,
+    width:'85%',
+    alignContent:'flex-start'
   },
 });
 

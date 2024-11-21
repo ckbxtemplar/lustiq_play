@@ -4,11 +4,12 @@ import { Text, StyleSheet, Pressable } from 'react-native';
 interface ButtonProps {
     onPress?: () => void;
     title?: string;
+    disabled?: boolean;
     variant?: 'primary' | 'secondary';
 }
 
 export default function Button(props: ButtonProps) {
-  const { onPress, title = 'Save',variant = 'primary' } = props;
+  const { onPress, title = 'Save', disabled= false, variant = 'primary' } = props;
 
   const buttonStyles = {
     primary: styles.buttonPrimary,
@@ -24,7 +25,7 @@ export default function Button(props: ButtonProps) {
   const textStyle = textStyles[variant];
 
   return (
-    <Pressable style={buttonStyle} onPress={onPress}>
+    <Pressable style={[buttonStyle, disabled && { opacity: 0.5 }]} disabled={disabled} onPress={disabled ? undefined : onPress}>
       <Text style={textStyle}>{title}</Text>
     </Pressable>
   );

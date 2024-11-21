@@ -21,8 +21,10 @@ const Card: React.FC<CardProps> = ({ title, description }) => {
 
     return (
         <Animated.View style={[styles.card, { opacity }]}>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.description}>{description}</Text>
+          <>
+            { title && <Text style={styles.title}>{title}</Text> }
+            { description && <Text style={styles.description}>{description}</Text> }
+          </>
         </Animated.View>
     );
 };
