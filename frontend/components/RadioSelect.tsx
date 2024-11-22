@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS, FONT_SIZES } from '../styles/constants';
 import LustiqButton from '../components/LustiqButton';
+import Octicons from '@expo/vector-icons/Octicons';
 
 interface Option {
   id: number;
@@ -26,7 +27,7 @@ const RadioSelect: React.FC<RadioSelectProps> = ({ options, parent, type, disabl
 
   const extendedOptions = type === 'optionsAndCustom'
     ? [...options, { id: 0, title: 'Egyedi érték', description: '', score: 'custom' }]
-    : options;
+    : options; 
 
   const handleSelect = () => {
     const selectedOption = extendedOptions.find((option) => option.id === selectedId);
@@ -76,7 +77,12 @@ const RadioSelect: React.FC<RadioSelectProps> = ({ options, parent, type, disabl
             </TouchableOpacity>
           </View>
         ))}
-        { type === 'talk' && <Text>Beszélgessetek</Text>}
+        { type === 'talk' && 
+        <View style={styles.containerTalk}>
+          <Text style={{ alignSelf: 'center', color: COLORS.primary.text, marginRight:8 }}>Beszélgessetek</Text>
+          <Octicons name="comment-discussion" size={24} color={COLORS.primary.text} />
+        </View>
+        }
       </View>
       {/* Gomb a kiválasztott érték küldésére */}
       <LustiqButton title={buttonMessage} disabled={disabled} onPress={handleSelect} />
@@ -142,6 +148,12 @@ const styles = StyleSheet.create({
     width:'85%',
     alignContent:'flex-start'
   },
+  containerTalk:{
+    flexDirection: 'row', // Egy sorban legyenek az elemek
+    justifyContent: 'center', // Vízszintesen középre igazítás
+    alignItems: 'center', // Függőlegesen középre igazítás
+    padding: 10,    
+  }
 });
 
 export default RadioSelect;

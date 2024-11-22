@@ -32,10 +32,10 @@ const LobbyScreen = () => {
         <View style={styles.container}>
           <ImageLogo variant='light'/>        
           <View style={styles.topBox}>
-            <Text>Your ID number for the pairing</Text>
+            <Text>A Te azonosítód a csatlakozáshoz</Text>
             <Text style={{color:'white', letterSpacing:10, fontWeight:700, fontSize:FONT_SIZES.large}}>{ user.sessionToken ? user.sessionToken : ''  }</Text>
           </View>
-          <View style={styles.circle}><Text style={{fontSize:FONT_SIZES.small}}>OR</Text></View>
+          <View style={styles.circle}><Text style={{fontSize:FONT_SIZES.small}}>VAGY</Text></View>
 
             <View style={styles.bottomBox}>
               <Image 
@@ -49,22 +49,22 @@ const LobbyScreen = () => {
                   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                     {gameReady === "request" || gameReady === "accept"  ? (
                       <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ marginBottom: 10 }}>Push the button to start the survey.</Text>
-                        <LustiqButton title="LET'S START SURVEY" onPress={() => router.push('/survey')}  />
+                        <Text style={{ marginBottom: 10 }}>Kattints a gombra a felmérés megkezdéséhez</Text>
+                        <LustiqButton title="KEZDJÜK A FELMÉRÉST" onPress={() => router.push('/survey')}  />
                       </View>
                     ) : gameReady === "accept" ? (
                       <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-                        <Text style={{ marginRight: 8 }}>Waiting for the host</Text>
+                        <Text style={{ marginRight: 8 }}>Várunk a partnerre</Text>
                         <ActivityIndicator size="small" color={COLORS.secondary.text} />
                       </View>
                     ) : gameReady === "survey" ? ( <Redirect href={'/survey'} /> )
                     : null}
                     
-                    <Text onPress={resetJoin} style={{ marginTop: 50, fontWeight: 'bold', fontSize: FONT_SIZES.small }}>Back</Text>
+                    <Text onPress={resetJoin} style={{ marginTop: 50, fontWeight: 'bold', fontSize: FONT_SIZES.small }}>Vissza</Text>
                   </View>
                 ) : (
                   <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ marginBottom: 10 }}>Enter your partner's code</Text>
+                    <Text style={{ marginBottom: 10 }}>Add meg a partnered azonosítóját </Text>
                     <FourDigitInput onComplete={handleComplete} />
                   </View>
                 )}

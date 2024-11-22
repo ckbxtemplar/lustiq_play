@@ -18,7 +18,9 @@ const HomeScreen = () => {
 
   if (!loggedIn) {
     return <Redirect href={'/login'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
-  }  
+  }  else {
+    return <Redirect href={'/lobby'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
+  }
 
   return (
     <View style={globalStyles.body}>

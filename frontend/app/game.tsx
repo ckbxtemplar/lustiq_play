@@ -7,8 +7,9 @@ import HorizontalStepper from '../components/HorizontalStepper';
 import Card from '../components/Card';
 import RadioSelect from '../components/RadioSelect';
 import ImageLogo from '../components/ImageLogo';
-import { FONT_SIZES } from '../styles/constants';
+import {COLORS, FONT_SIZES } from '../styles/constants';
 import globalStyles from '../styles/styles';
+import Octicons from '@expo/vector-icons/Octicons';
 import axios from 'axios';
 
 const GameScreen = ({  }) => {
@@ -34,7 +35,7 @@ const GameScreen = ({  }) => {
   const [questions, setQuestions] = useState([]); 
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [answersStatus, setanswersStatus] = useState('start');
-  const [welcomeMsg, setWelcomeMsg] = useState(true);
+  const [welcomeMsg, setWelcomeMsg] = useState('start');
   const [buttonMessage, setButtonMessage] =  useState('Tovább');  
   const [disabledButton, setDisabledButton] = useState(false);
   const welcomeOpacity = useRef(new Animated.Value(0)).current;  
@@ -58,7 +59,7 @@ const GameScreen = ({  }) => {
       Animated.delay(300),
     ]).start(() => {
       // Animáció végén meghívódik a megadott függvény
-      setWelcomeMsg(false);
+      setWelcomeMsg('game');
     });
   }, [welcomeOpacity]);
 
@@ -75,8 +76,9 @@ const GameScreen = ({  }) => {
         const nextStep = currentStep + 1;
         if (questions[nextStep]) {
           setCurrentStep(nextStep);
+          if (questions[nextStep].type == 'talk') setButtonMessage('Kész, várjuk a következő kérdést.')
         } else {
-          // Nincs több kérdés, jöhet a lezárás
+          setWelcomeMsg('end');
         }
         setOpponentStatus('pending');
         setGameReady(false);
@@ -96,7 +98,7 @@ const GameScreen = ({  }) => {
   useEffect(() => {
     const initialize = async () => {
       try {
-        axios.post(`http://${devHost}:3000/getQuestions`,{ room:gameProps.room })
+        axios.post(`http://${devHost}:8090/getQuestions`,{ room:gameProps.room })
         .then(response => {
           const minScore = response.data.score;
           const questionsData = response.data.questions;
@@ -134,7 +136,7 @@ const GameScreen = ({  }) => {
         setanswersStatus('end');
       });
 
-      axios.post(`http://${devHost}:3000/saveAnswers`, { answers: answers, userId: user.userId, room:gameProps.room })
+      axios.post(`http://${devHost}:8090/saveAnswers`, { answers: answers, userId: user.userId, room:gameProps.room })
       .then(response => {
         console.log(response.data);
       })
@@ -155,7 +157,7 @@ const GameScreen = ({  }) => {
         
         <View style={styles.container}>
           <HorizontalStepper totalSteps={totalSteps} currentStep={currentStep} />
-          { welcomeMsg ? (
+          { welcomeMsg === 'start' ? (
           <Animated.View style={[styles.animatedBox, { opacity: welcomeOpacity }]}>
             <>
               <Image 
@@ -165,7 +167,7 @@ const GameScreen = ({  }) => {
               <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:40 }}>Kezdődjön a játék</Text>
             </>
           </Animated.View>
-          ) : (
+          ) : welcomeMsg === 'game' ? (
             <Animated.View style={[styles.animatedBox, { opacity: opacity }]}>
               <View style={styles.container}>
                 { questions[currentStep] ? (
@@ -179,7 +181,12 @@ const GameScreen = ({  }) => {
                 ) : (<Text>No data</Text>)}
               </View>
             </Animated.View>
-          ) }             
+          ) : welcomeMsg === 'end' ? (
+            <View style={styles.containerEnd}>            
+              <Text style={{fontSize:FONT_SIZES.large, color:COLORS.primary.text, marginTop:8, marginRight:8 }}>Eljött a TI időtök </Text>
+              <Octicons name="heart" size={24} color={COLORS.primary.text} />
+            </View>
+          ) : null }             
           <ImageLogo variant='icon' shouldRotate={ isLoading }/>  
         </View>     
         <Footer />  
@@ -202,6 +209,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     width: '100%'
+  },
+  containerEnd: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,     
   }  
 });
 

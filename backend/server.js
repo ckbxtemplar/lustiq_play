@@ -13,7 +13,7 @@ const fs = require('fs');
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'viktor',
-  password: 'lplay@24',
+  password: '1st3nMegbassza01',
   database: 'lustiq_play'
 });
 
@@ -26,8 +26,8 @@ db.connect(err => {
 let wss;
 let clients = {};
 try {
-  wss = new WebSocket.Server({ port: 8080 });
-  console.log('WebSocket running on port 8080');
+  wss = new WebSocket.Server({ port: 8095 });
+  console.log('WebSocket running on port 8095');
 } catch (error) {
   console.error('Failed to start WebSocket server:', error);
 }
@@ -426,7 +426,7 @@ app.post('/getQuestions', (req, res) => {
         case 3:
           question_ids = [...question_ids, 74, 75, 76, 77, 79, 80];
         case 2:
-          question_ids = [...question_ids, 62, 63, 65, 66, 67, 69, 70, 71, 72, 73];
+          question_ids = [...question_ids, 62, 63, 65, 66, 67, 69, 70, 71, 72]; //73 at kivettem
         case 1:
           question_ids = [...question_ids, 48, 50, 52, 54, 56, 58, 60];
           break;
@@ -449,7 +449,7 @@ app.post('/getQuestions', (req, res) => {
     sql = `SELECT q.id as id, q.title as title, q.description as description, qo.id as o_id, qo.title as o_title, qo.description as o_description, q.type as type
       FROM questions as q 
       LEFT JOIN question_options as qo ON q.id = qo.question_id 
-      where (q.id IN (${placeholders}) OR q.parent IN (${placeholders}));`;
+      where q.type = 'talk' AND (q.id IN (${placeholders}) OR q.parent IN (${placeholders}));`;
     db.query(sql, [...finalQuestionIds, ...finalQuestionIds], (err, results) => {
       if (err) {
         console.error("SQL query error:", err);
@@ -524,6 +524,6 @@ app.get('/hello', (req, res) => {
   res.send('Hello World');
 });
 
-app.listen(3000, () => {
-  console.log('Express running on port 3000');
+app.listen(8090, () => {
+  console.log('Express running on port 8090');
 });

@@ -22,14 +22,14 @@ const LoginScreen = () => {
 
   // LOGIN
   const login = () => {
-    axios.post(`http://${devHost}:3000/login`, { email, password })
+    axios.post(`http://${devHost}:8090/login`, { email, password })
       .then(response => {
         const { token } = response.data; 
         // const decodedToken = JWT.decode(token, 'yvhtR5}#O]w7lAs');     
         const decodedToken = token;
         logIn(decodedToken);
        
-        axios.get(`http://${devHost}:3000/hello`, {
+        axios.get(`http://${devHost}:8090/hello`, {
           headers: { 'Authorization': token }
         })
         .then(res => {
@@ -54,7 +54,7 @@ const LoginScreen = () => {
       return;
     }
 
-    axios.post(`http://${devHost}:3000/register`, {
+    axios.post(`http://${devHost}:8090/register`, {
       email,
       password,
       username      
@@ -77,11 +77,12 @@ const LoginScreen = () => {
   return (
     <View style={globalStyles.body}>
       <View style={globalStyles.loginContainer}>
+        <Text style={{fontSize:20}}>HAMAROSAN INDULUNK</Text>
       <ImageLogo /> 
       {showRegistration ? (
         // Regisztrációs felület
         <>
-          <Text>Username</Text>
+          <Text>Felhasználónév</Text>
           <TextInput
            style={ globalStyles.input }
             value={username}
@@ -97,26 +98,26 @@ const LoginScreen = () => {
             placeholder="Email"
             placeholderTextColor="#CF3E45"
           />
-          <Text>Password</Text>
+          <Text>Jelszó</Text>
           <TextInput
             style={ globalStyles.input }
             value={password}
             onChangeText={setPassword}
             secureTextEntry={true}
-            placeholder="Password"
+            placeholder="Jelszó"
             placeholderTextColor="#CF3E45"
           />
-          <Text>Confirm Password</Text>
+          <Text>Jelszó újra</Text>
           <TextInput
             style={ globalStyles.input }
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry={true}
-            placeholder="Confirm Password"
+            placeholder="Jelszó újra"
             placeholderTextColor="#CF3E45"
           />
-          <View style={{ marginBottom:10 }}><LustiqButton  title="Regist" onPress={register} /></View>
-          <View style={{ marginBottom:10 }}><LustiqButton title="Back to Login" onPress={() => setShowRegistration(false)} /></View>
+          <View style={{ marginBottom:10 }}><LustiqButton  title="Regisztráció" onPress={register} /></View>
+          <View style={{ marginBottom:10 }}><LustiqButton title="Vissza" onPress={() => setShowRegistration(false)} /></View>
         </>
       ) : (
         // Bejelentkezési felület
@@ -129,13 +130,13 @@ const LoginScreen = () => {
             placeholder="Email"
             placeholderTextColor="#CF3E45"
           />
-          <Text>Password</Text>
+          <Text>Jelszó</Text>
           <TextInput
             style={ globalStyles.input }
             value={password}
             onChangeText={setPassword}
             secureTextEntry={true}
-            placeholder="Password"
+            placeholder="Jelszó"
             placeholderTextColor="#CF3E45"
           />
           <View style={{ marginBottom:10 }}><LustiqButton title="Login" onPress={login} /></View>

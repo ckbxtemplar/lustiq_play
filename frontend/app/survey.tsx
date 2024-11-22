@@ -10,6 +10,7 @@ import ImageLogo from '../components/ImageLogo';
 import { COLORS, FONT_SIZES } from '../styles/constants';
 import LustiqButton from '../components/LustiqButton';
 import globalStyles from '../styles/styles';
+import Octicons from '@expo/vector-icons/Octicons';
 import axios from 'axios';
 
 const SurveyScreen = ({  }) => {
@@ -23,6 +24,8 @@ const SurveyScreen = ({  }) => {
   const [questions, setQuestions] = useState([]); 
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [surveyStatus, setSurveyStatus] = useState('start');
+  const [buttonTitle, setbuttonTitle] = useState('Kezdhetjük!');
+  
   const [buttonMessage] =  useState('Tovább');
   const [showMessage, setShowMessage] = useState(false);
   const opacity = useRef(new Animated.Value(0)).current;
@@ -31,19 +34,19 @@ const SurveyScreen = ({  }) => {
     if (surveyStatus === 'start') {
       // Start fázis animáció
       Animated.sequence([
-        Animated.delay(500),
+        Animated.delay(400),
         Animated.timing(opacity, {
           toValue: 1,
           duration: 2000,
           useNativeDriver: false,
         }),
-        Animated.delay(2000),
+        Animated.delay(1600),
         Animated.timing(opacity, {
           toValue: 0,
           duration: 1000,
           useNativeDriver: false,
         }),
-        Animated.delay(500),
+        Animated.delay(400),
       ]).start(() => {
         setSurveyStatus('survey'); // Tovább a következő fázisra
       });
@@ -52,7 +55,7 @@ const SurveyScreen = ({  }) => {
       Animated.sequence([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 2000,
+          duration: 1600,
           useNativeDriver: false,
         }),
       ]).start();
@@ -61,7 +64,7 @@ const SurveyScreen = ({  }) => {
       Animated.sequence([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 2000,
+          duration: 1600,
           useNativeDriver: false,
         }),
       ]).start();
@@ -73,7 +76,6 @@ const SurveyScreen = ({  }) => {
     if (gameReady === 'readyToPlay' && opponentStatus === 'readyToPlay' && !hasAnimated.current) {
       hasAnimated.current = true;      
       setShowMessage(true); // Aktiválja az üzenet megjelenítését
-      // Animáció: megjelenítés
       Animated.sequence([
         Animated.timing(opacity, {
           toValue: 1,
@@ -91,12 +93,17 @@ const SurveyScreen = ({  }) => {
         router.push('/game'); // Átirányítás az animáció után
       });
     }
+    else if (gameReady === 'readyToPlay' && opponentStatus !== 'readyToPlay')
+    {
+      const t = `${joinedUser.username} még nem töltötte ki..`;
+      setbuttonTitle(t);
+    }
   }, [gameReady, opponentStatus]);
 
   useEffect(() => {
     const initialize = async () => {
       try {
-        axios.post(`http://${devHost}:3000/getSurvey`)
+        axios.post(`http://${devHost}:8090/getSurvey`)
         .then(response => {
           const questionsData = response.data.questions;
           setQuestions(questionsData);        
@@ -129,9 +136,7 @@ const SurveyScreen = ({  }) => {
 
   useEffect(() => {
     if (Object.keys(answers).length >= questions.length && questions.length > 0) {
-
-      // const wm = `Várunk ${joinedUser.username} válaszára...`;    
-      // setButtonMessage(wm);      
+ 
       Animated.timing(opacity, {
         toValue: 0,
         duration: 1000,
@@ -143,7 +148,7 @@ const SurveyScreen = ({  }) => {
       
       const totalScore = calculateTotalScore(questions,answers);
       setScore(totalScore);
-      axios.post(`http://${devHost}:3000/saveAnswers`, { answers: answers, userId: user.userId, room:gameProps.room })
+      axios.post(`http://${devHost}:8090/saveAnswers`, { answers: answers, userId: user.userId, room:gameProps.room })
       .then(response => {
         console.log(response.data);
       })
@@ -219,17 +224,17 @@ const SurveyScreen = ({  }) => {
                 resizeMode="contain" // Ezzel a kép lefedi az egész nézetet
                 />              
               <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:40, marginBottom:10, textAlign:'center' }}>Köszönjük a válaszokat!</Text>
-              <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:20, marginBottom:10, textAlign:'center' }}>Kattints a gombra, ha készen állsz az élményre.</Text>              
+              <Text style={{fontSize:FONT_SIZES.small, color:'white', marginTop:20, marginBottom:10, textAlign:'center' }}>Kattints a gombra, ha készen állsz az élményre.</Text>              
               { !showMessage ? (                
-                <LustiqButton title="LET'S PLAY" onPress={startGame}  />        
+                <LustiqButton title={buttonTitle} onPress={startGame}  />        
               ):(
                 <Animated.View style={{ opacity }}>
-                  <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>Kezeket a paplan fölé...</Text>
+                  <View style={styles.containerStart}>
+                    <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8, marginRight:8 }}>Kezdhetjük...</Text>
+                    <Octicons name="code-of-conduct" size={24} color={COLORS.primary.text} />
+                  </View>
                 </Animated.View>
               )}
-              <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>Mi státuszunk: {gameReady}</Text>
-              <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>Enemy státusza: {opponentStatus}</Text>                            
-              <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>{score}</Text>
             </>
             </Animated.View>              
           ) : null 
@@ -257,6 +262,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     width: '100%'
+  },
+  containerStart:{
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,       
   }  
 });
 

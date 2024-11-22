@@ -8,7 +8,7 @@ function RootLayoutContent() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         headerLeft: () => (
           <View style={{ flexDirection: 'row' }}>
             <Button onPress={() => router.push('/login')} title="Login" />

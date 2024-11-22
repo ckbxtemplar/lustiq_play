@@ -87,7 +87,7 @@ export function AuthProvider({ children }) {
     if (loggedIn) {
       const userId = user.userId;      
       // WebSocket kapcsolat létesítése
-      ws.current = new WebSocket(`ws://${devHost}:8080`);
+      ws.current = new WebSocket(`ws://${devHost}:8095`);
 
       ws.current.onopen = () => {
         console.log('Connected to WS server');      
