@@ -77,7 +77,7 @@ const LoginScreen = () => {
   return (
     <View style={globalStyles.body}>
       <View style={globalStyles.loginContainer}>
-        <Text style={{fontSize:20}}>HAMAROSAN INDULUNK</Text>
+        <Text style={{fontSize:18, alignContent:'center', alignSelf:'center', color:'white'}}>HAMAROSAN INDULUNK</Text>
       <ImageLogo /> 
       {showRegistration ? (
         // Regisztrációs felület
