@@ -22,14 +22,14 @@ const LoginScreen = () => {
 
   // LOGIN
   const login = () => {
-    axios.post(`http://${devHost}:8090/login`, { email, password })
+    axios.post(`https://${devHost}/login`, { email, password })
       .then(response => {
         const { token } = response.data; 
         // const decodedToken = JWT.decode(token, 'yvhtR5}#O]w7lAs');     
         const decodedToken = token;
         logIn(decodedToken);
        
-        axios.get(`http://${devHost}:8090/hello`, {
+        axios.get(`https://${devHost}/hello`, {
           headers: { 'Authorization': token }
         })
         .then(res => {
@@ -54,7 +54,7 @@ const LoginScreen = () => {
       return;
     }
 
-    axios.post(`http://${devHost}:8090/register`, {
+    axios.post(`https://${devHost}/register`, {
       email,
       password,
       username      

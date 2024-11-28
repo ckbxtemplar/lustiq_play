@@ -98,7 +98,7 @@ const GameScreen = ({  }) => {
   useEffect(() => {
     const initialize = async () => {
       try {
-        axios.post(`http://${devHost}:8090/getQuestions`,{ room:gameProps.room })
+        axios.post(`https://${devHost}/getQuestions`,{ room:gameProps.room })
         .then(response => {
           const minScore = response.data.score;
           const questionsData = response.data.questions;
@@ -136,7 +136,7 @@ const GameScreen = ({  }) => {
         setanswersStatus('end');
       });
 
-      axios.post(`http://${devHost}:8090/saveAnswers`, { answers: answers, userId: user.userId, room:gameProps.room })
+      axios.post(`https://${devHost}/saveAnswers`, { answers: answers, userId: user.userId, room:gameProps.room })
       .then(response => {
         console.log(response.data);
       })

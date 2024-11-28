@@ -71,7 +71,7 @@ const DisplayAnImage: React.FC<DisplayAnImageProps> = ({ base64Image = null, isE
         },
       };
 
-      const responseUpload = await axios.post(`http://${devHost}:8090/upload`, formData, config);
+      const responseUpload = await axios.post(`https://${devHost}/upload`, formData, config);
 
       if (responseUpload.status === 200) {
         Alert.alert('Success', 'Image uploaded successfully');

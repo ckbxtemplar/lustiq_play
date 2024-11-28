@@ -103,7 +103,7 @@ const SurveyScreen = ({  }) => {
   useEffect(() => {
     const initialize = async () => {
       try {
-        axios.post(`http://${devHost}:8090/getSurvey`)
+        axios.post(`https://${devHost}/getSurvey`)
         .then(response => {
           const questionsData = response.data.questions;
           setQuestions(questionsData);        
@@ -148,7 +148,7 @@ const SurveyScreen = ({  }) => {
       
       const totalScore = calculateTotalScore(questions,answers);
       setScore(totalScore);
-      axios.post(`http://${devHost}:8090/saveAnswers`, { answers: answers, userId: user.userId, room:gameProps.room })
+      axios.post(`https://${devHost}/saveAnswers`, { answers: answers, userId: user.userId, room:gameProps.room })
       .then(response => {
         console.log(response.data);
       })

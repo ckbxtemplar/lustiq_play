@@ -7,7 +7,7 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const platform = (Platform.OS === 'web' ? Platform.OS : 'mobile');
-  const devHost = (platform == 'web' ? 'localhost' : '10.0.2.2');
+  const devHost = (platform == 'web' ? 'api.play.lustiq.eu' : 'api.play.lustiq.eu');
   const ws = useRef(null);
 
   const [platformdata] = useState({platform:platform,devHost:devHost}); 
@@ -87,7 +87,7 @@ export function AuthProvider({ children }) {
     if (loggedIn) {
       const userId = user.userId;      
       // WebSocket kapcsolat létesítése
-      ws.current = new WebSocket(`ws://${devHost}:8095`);
+      ws.current = new WebSocket(`wss://${devHost}/wss/`);
 
       ws.current.onopen = () => {
         console.log('Connected to WS server');      
