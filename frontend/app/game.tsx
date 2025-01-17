@@ -41,7 +41,6 @@ const GameScreen = ({  }) => {
   const welcomeOpacity = useRef(new Animated.Value(0)).current;  
   const opacity = useRef(new Animated.Value(1)).current;
 
-
   useEffect(() => {
     Animated.sequence([
       Animated.delay(300),
@@ -96,6 +95,7 @@ const GameScreen = ({  }) => {
   }, [gameReady, opponentStatus]);
 
   useEffect(() => {
+    if (platformdata.platform === 'web') document.title = 'Lustiq Play - Game';
     const initialize = async () => {
       try {
         axios.post(`https://${devHost}/getQuestions`,{ room:gameProps.room })
@@ -107,7 +107,11 @@ const GameScreen = ({  }) => {
         })
         .catch(err => {
           console.log(err.response || err);        
-          Alert.alert('Error', 'Error get questions from backend');
+          if (platformdata.platform === 'web') {
+            window.alert('Error get questions from backend');
+          } else {
+            Alert.alert('Error', 'Error get questions from backend');
+          }           
         });        
       } catch (error) {
         console.error('Error loading data:', error);
@@ -142,12 +146,16 @@ const GameScreen = ({  }) => {
       })
       .catch(err => {
         console.log(err.response || err);        
-        Alert.alert('Error', 'Submitting the form failed.');
+        if (platformdata.platform === 'web') {
+          window.alert('Submitting the form failed.');
+        } else {
+          Alert.alert('Error', 'Submitting the form failed.');
+        }        
       });
     }
-  }, [answers]);    
+  }, [answers]);
 
-  if (!joinedUser) {
+  if (!joinedUser || !user?.sessionToken) {
     return <Redirect href={'/lobby'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
   }    
 

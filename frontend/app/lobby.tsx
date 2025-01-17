@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '../AuthContext';
 import { Redirect, useRouter } from 'expo-router';
@@ -11,7 +11,7 @@ import { COLORS,RADIUS,FONT_SIZES } from '../styles/constants';
 
 const LobbyScreen = () => {
   const router = useRouter(); 
-  const { loggedIn, user, joinedUser, isLoading, handleJoinGame, setJoinedUser, gameReady, setGameReady } = useAuth();
+  const { loggedIn, user, joinedUser, isLoading, handleJoinGame, setJoinedUser, gameReady, setGameReady, platformdata } = useAuth();
 
   const handleComplete = (code: string) => {
     handleJoinGame(code);
@@ -22,18 +22,22 @@ const LobbyScreen = () => {
     setGameReady(false); 
   };   
 
-  if (!loggedIn) {
+  useEffect(() => {
+    if (platformdata.platform === 'web') document.title = joinedUser ? 'Lustiq Play - Connected' : 'Lustiq Play - Waiting';
+  }, [joinedUser]);  
+
+  if (!loggedIn || !user?.sessionToken) {
     return <Redirect href={'/login'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
   } 
 
-  return (
-    <View style={globalStyles.body}>
+  return (   
+    <View style={globalStyles.body}>      
       <View style={globalStyles.bodyContainer}>
         <View style={styles.container}>
           <ImageLogo variant='light'/>        
           <View style={styles.topBox}>
             <Text>A Te azonosítód a csatlakozáshoz</Text>
-            <Text style={{color:'white', letterSpacing:10, fontWeight:700, fontSize:FONT_SIZES.large}}>{ user.sessionToken ? user.sessionToken : ''  }</Text>
+            <Text style={{color:'white', letterSpacing:10, fontWeight:700, fontSize:FONT_SIZES.large}}>{ user?.sessionToken ? user.sessionToken : ''  }</Text>
           </View>
           <View style={styles.circle}><Text style={{fontSize:FONT_SIZES.small}}>VAGY</Text></View>
 

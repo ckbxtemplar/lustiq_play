@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Alert } from 'react-native';
 import { useAuth } from '../AuthContext';
 import { Redirect  } from 'expo-router';
@@ -7,10 +7,9 @@ import FooterLogin from '../components/FooterLogin';
 import LustiqButton from '../components/LustiqButton';
 import ImageLogo from '../components/ImageLogo';
 import globalStyles from '../styles/styles';
-import JWT from 'expo-jwt';
 
 const LoginScreen = () => {
-  const { loggedIn, platformdata, logIn } = useAuth();    
+  const { loggedIn, user, platformdata, logIn } = useAuth();    
   const [showRegistration, setShowRegistration] = useState(false);
   const devHost = platformdata.devHost;
 
@@ -36,20 +35,32 @@ const LoginScreen = () => {
             setMessage(res.data);
         })
         .catch(err => {
-          Alert.alert('Error', 'Could not retrieve message');
+          if (platformdata.platform === 'web') {
+            window.alert('Could not retrieve message');
+          } else {
+            Alert.alert('Error', 'Could not retrieve message');
+          }           
           console.log('Could not retrieve message');
         });
       })
       .catch(err => {
         console.log(err.response || err);        
-        Alert.alert('Error', 'Invalid email or password');
+        if (platformdata.platform === 'web') {
+          window.alert('Invalid email or password');
+        } else {
+          Alert.alert('Error', 'Invalid email or password');
+        }         
       });
   };
 
   // REGISTRATION
   const register = () => {
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      if (platformdata.platform === 'web') {
+        window.alert('Passwords do not match');
+      } else {
+        Alert.alert('Error', 'Passwords do not match');
+      }       
       console.log('Passwords do not match');      
       return;
     }
@@ -60,17 +71,29 @@ const LoginScreen = () => {
       username      
     })
     .then(response => {
-      Alert.alert('Success', 'Registration successful!');
+      if (platformdata.platform === 'web') {
+        window.alert('Registration successful!');
+      } else {
+        Alert.alert('Error', 'Registration successful!');
+      }       
       console.log('Registration successful!');      
       setShowRegistration(false); // Vissza a bejelentkezési felületre
     })
     .catch(err => {
-      Alert.alert('Error', 'Registration failed');
+      if (platformdata.platform === 'web') {
+        window.alert('Registration failed');
+      } else {
+        Alert.alert('Error', 'Registration failed');
+      }       
       console.log('Registration failed');      
     });
   };
 
-  if (loggedIn) {
+  useEffect(() => {
+    if (platformdata.platform === 'web') document.title = showRegistration ? 'Lustiq Play - Registration' : 'Lustiq Play - Login';
+  }, [showRegistration]);
+
+  if (loggedIn && user?.sessionToken ) {
     return <Redirect href={'/home'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
   }    
 

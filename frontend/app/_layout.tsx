@@ -1,40 +1,57 @@
-import { Stack, useRouter } from 'expo-router';
-import { View, Button } from 'react-native';
-import { AuthProvider } from '../AuthContext';
-
-function RootLayoutContent() {
-  const router = useRouter();
-
-  return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        headerLeft: () => (
-          <View style={{ flexDirection: 'row' }}>
-            <Button onPress={() => router.push('/login')} title="Login" />
-            <Button onPress={() => router.push('/')} title="Index" />
-            <Button onPress={() => router.push('/home')} title="Home" />
-            <Button onPress={() => router.push('/lobby')} title="Lobby" />              
-            <Button onPress={() => router.push('/survey')} title="Survey" />
-            <Button onPress={() => router.push('/game')} title="Game" />              
-          </View>
-        ),
-      }}
-    >
-      <Stack.Screen name="index" />      
-      <Stack.Screen name="login" />     
-      <Stack.Screen name="home" />
-      <Stack.Screen name="lobby" />
-      <Stack.Screen name="survey" />            
-      <Stack.Screen name="game" />
-    </Stack>
-  );
-}
+import { Stack } from "expo-router";
+import { AuthProvider } from "../AuthContext";
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutContent />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen
+          name="index"
+          options={{
+            title: "Lustiq Play",
+            headerTitle: 'In Progress', 
+          }}
+        />
+        <Stack.Screen
+          name="login"
+          options={{
+            title: "Lustiq Play - Login",
+            headerTitle: 'In Progress',          
+          }}
+        />
+        <Stack.Screen
+          name="home"
+          options={{
+            title: "Lustiq Play - Home",
+            headerTitle: 'In Progress',            
+          }}
+        />
+        <Stack.Screen
+          name="lobby"
+          options={{
+            title: "Lustiq Play - Lobby",
+            headerTitle: 'In Progress',            
+          }}
+        />
+        <Stack.Screen
+          name="survey"
+          options={{
+            title: "Lustiq Play - Survey",
+            headerTitle: 'In Progress',            
+          }}
+        />
+        <Stack.Screen
+          name="game"
+          options={{
+            title: "Lustiq Play - Game",
+            headerTitle: 'In Progress',            
+          }}
+        />
+      </Stack>
     </AuthProvider>
   );
 }

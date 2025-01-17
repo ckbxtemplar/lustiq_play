@@ -48,9 +48,6 @@ export function AuthProvider({ children }) {
     setIsLoading(true);
     setGameReady('readyToPlay');
   
-    console.log("user:"+user.sessionToken);
-    console.log("joined user:"+joinedUser.userSession);  
-
     ws.current.send(JSON.stringify({
       type: 'readyToPlay',      
       fromSessionToken: user.sessionToken,
@@ -84,7 +81,7 @@ export function AuthProvider({ children }) {
   // WEBSOCKET
   useEffect(() => {
     
-    if (loggedIn) {
+    if (loggedIn && user?.userId) {
       const userId = user.userId;      
       // WebSocket kapcsolat létesítése
       ws.current = new WebSocket(`wss://${devHost}/wss/`);

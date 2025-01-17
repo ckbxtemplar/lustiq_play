@@ -101,6 +101,7 @@ const SurveyScreen = ({  }) => {
   }, [gameReady, opponentStatus]);
 
   useEffect(() => {
+    if (platformdata.platform === 'web') document.title = 'Lustiq Play - Survey';
     const initialize = async () => {
       try {
         axios.post(`https://${devHost}/getSurvey`)
@@ -112,7 +113,11 @@ const SurveyScreen = ({  }) => {
         })
         .catch(err => {
           console.log(err.response || err);        
-          Alert.alert('Error', 'Error get survey from backend');
+          if (platformdata.platform === 'web') {
+            window.alert('Error get survey from backend');
+          } else {
+            Alert.alert('Error', 'Error get survey from backend');
+          }          
         });        
       } catch (error) {
         console.error('Error loading data:', error);
@@ -154,7 +159,11 @@ const SurveyScreen = ({  }) => {
       })
       .catch(err => {
         console.log(err.response || err);        
-        Alert.alert('Error', 'Submitting the form failed.');
+        if (platformdata.platform === 'web') {
+          window.alert('Submitting the form failed.');
+        } else {
+          Alert.alert('Error', 'Submitting the form failed.');
+        }        
       });
     }
   }, [answers]);  
@@ -181,7 +190,7 @@ const SurveyScreen = ({  }) => {
     return totalScore;
   };
 
-  if (!joinedUser) {
+  if (!joinedUser || !user?.sessionToken) {
     return <Redirect href={'/lobby'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
   }      
 

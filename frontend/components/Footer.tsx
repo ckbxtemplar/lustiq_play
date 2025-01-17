@@ -13,14 +13,22 @@ const Footer = () => {
   return (
     <View style={styles.footerContainer}>
       <View style={styles.leftContainer}>
-        { loggedIn && (
-          <>          
+      { loggedIn && (
+        <>          
+          { user?.avatar && (
             <BinaryImageComponent base64Image={user.avatar} isEditable={true} />
-            { joinedUser && (<BinaryImageComponent base64Image={joinedUser.avatar} isEditable={false} /> )}
+          )}            
+          { joinedUser?.avatar && (
+            <BinaryImageComponent base64Image={joinedUser.avatar} isEditable={false} />
+          )}
+          { user?.username && (
             <Text style={{fontSize:FONT_SIZES.small, marginLeft:8, color:'white'}}>{user.username}</Text>
-            { joinedUser && ( <Text style={{fontSize:FONT_SIZES.small, color:'white'}}> & {joinedUser.username}</Text> ) }
-          </>
-        )}
+          )}            
+          { joinedUser?.username && (
+            <Text style={{fontSize:FONT_SIZES.small, color:'white'}}> & {joinedUser.username}</Text>
+          )}
+        </>
+      )}
       </View>
       <View style={styles.midContainer}>       
 
