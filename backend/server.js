@@ -6,20 +6,27 @@ const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
 const WebSocket = require('ws');
 const multer = require('multer');
-const sharp = require('sharp');
+// const sharp = require('sharp');
 const fs = require('fs');
 
 // SQL
-const db = mysql.createConnection({
+const db = mysql.createPool({
+  connectionLimit: 50,
   host: 'localhost',
   user: 'viktor',
   password: '1st3nMegbassza01',
-  database: 'lustiq_play'
+  database: 'lustiq_play',
+  connectTimeout: 10000, // 10 másodperc
+  acquireTimeout: 10000, // 10 másodperc  
 });
 
-db.connect(err => {
-  if (err) throw err;
-  console.log('MySQL connected');
+db.getConnection((err, connection) => {
+  if (err) {
+    console.error('MySQL pool connection error:', err);
+    return;
+  }
+  console.log('MySQL pool connected');
+  connection.release(); // Kapcsolat visszaadása a pool-ba
 });
 
 // WEBSOCKET
@@ -264,7 +271,12 @@ async function handlePartnerData(userSession) {
 
 // EXPRESS
 const app = express();
-app.use(cors());
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
 app.use(bodyParser.json());
 
 // Regisztráció (opcionális, hogy létrehozz egy felhasználót)
@@ -320,13 +332,13 @@ app.post('/upload', upload.single('image'), async (req, res) => {
     const userId = req.body.id_user; // Felhasználói azonosító
     const userSession = req.body.session_user; // Felhasználói session    
 
-    // Sharp használata a kép átméretezésére 64x64-es méretre
-    const resizedImageBuffer = await sharp(req.file.buffer)
-      .resize(64, 64)
-      .toBuffer();
+    // // Sharp használata a kép átméretezésére 64x64-es méretre
+    // const resizedImageBuffer = await sharp(req.file.buffer)
+    //   .resize(64, 64)
+    //   .toBuffer();
 
-    // Base64 kódolás
-    const base64Image = resizedImageBuffer.toString('base64');
+    // // Base64 kódolás
+    // const base64Image = resizedImageBuffer.toString('base64');
 
     // Frissített SQL lekérdezés az upserthez
     const query = `INSERT INTO user_images (user_id, category, image) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE image = VALUES(image)`;
@@ -391,7 +403,6 @@ app.post('/getSurvey', (req, res) => {
 
 
 const roomQuestions = {};
-// Kérdések küldése
 app.post('/getQuestions', (req, res) => {
   let level = 0;
   let sql = "";
@@ -431,7 +442,7 @@ app.post('/getQuestions', (req, res) => {
           question_ids = [...question_ids, 48, 50, 52, 54, 56, 58, 60];
           break;
       }
-      // Véletlenszerű 6 elem kiválasztása a question_ids tömbből
+
       function getRandomElements(array, count) {
         const shuffled = array.slice(); // Másolatot készítünk az eredeti tömbről
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -449,7 +460,8 @@ app.post('/getQuestions', (req, res) => {
     sql = `SELECT q.id as id, q.title as title, q.description as description, qo.id as o_id, qo.title as o_title, qo.description as o_description, q.type as type
       FROM questions as q 
       LEFT JOIN question_options as qo ON q.id = qo.question_id 
-      where q.type = 'talk' AND (q.id IN (${placeholders}) OR q.parent IN (${placeholders}));`;
+      where q.type = 'talk' AND (q.id IN (${placeholders}) OR q.parent IN (${placeholders}))
+      LIMIT 10;`;
     db.query(sql, [...finalQuestionIds, ...finalQuestionIds], (err, results) => {
       if (err) {
         console.error("SQL query error:", err);

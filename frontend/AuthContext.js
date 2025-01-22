@@ -97,9 +97,8 @@ export function AuthProvider({ children }) {
         {
           const userData = { ...user }; // A user klónozása
           userData.sessionToken = data.sessionToken;
-          setUser(userData);  // Frissítsd a user-t
+          setUser(userData);  
           
-          // AsyncStorage mentés az új állapot szerint
           await AsyncStorage.setItem('user', JSON.stringify(userData));
   
           const code = await AsyncStorage.getItem('code');          
@@ -111,11 +110,10 @@ export function AuthProvider({ children }) {
         {              
             setJoinedUser( data.joinedUser );
             setGameReady( data.direction );
-            setIsLoading(false);
+            setIsLoading( false );
             
-            const gameP = gameProps;
-            gameP.room = data.room;
-            setGameProps(gameP);
+            const updatedGameProps = { ...gameProps, room: data.room };
+            setGameProps(updatedGameProps);            
             console.log('Message from WS server (join):', data.message);                 
         } 
         else if (data.type === 'refreshJoinedPlayer') 
@@ -151,7 +149,7 @@ export function AuthProvider({ children }) {
       ws.current = null;
     }
 
-  }, [loggedIn]); // A függvény csak akkor fut, ha a loggedIn állapot változik
+  }, [loggedIn]);
 
   return (
     <AuthContext.Provider value={{ platformdata, user, joinedUser, loggedIn, logIn, logOut, ws, isLoading, setIsLoading, gameReady, handleJoinGame, setJoinedUser, setGameReady, startGame, opponentStatus, setOpponentStatus, gameProps, setGameProps, readyToNextQuestion }}>

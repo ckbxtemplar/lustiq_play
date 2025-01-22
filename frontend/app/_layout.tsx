@@ -51,6 +51,13 @@ export default function RootLayout() {
             headerTitle: 'In Progress',            
           }}
         />
+        <Stack.Screen
+          name="relax"
+          options={{
+            title: "Lustiq Play - Relax",
+            headerTitle: 'In Progress',            
+          }}
+        />        
       </Stack>
     </AuthProvider>
   );

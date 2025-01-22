@@ -37,10 +37,10 @@ const SurveyScreen = ({  }) => {
         Animated.delay(400),
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 2000,
+          duration: 1000,
           useNativeDriver: false,
         }),
-        Animated.delay(1600),
+        Animated.delay(1000),
         Animated.timing(opacity, {
           toValue: 0,
           duration: 1000,
@@ -55,7 +55,7 @@ const SurveyScreen = ({  }) => {
       Animated.sequence([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 1600,
+          duration: 1500,
           useNativeDriver: false,
         }),
       ]).start();
@@ -64,7 +64,7 @@ const SurveyScreen = ({  }) => {
       Animated.sequence([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 1600,
+          duration: 1500,
           useNativeDriver: false,
         }),
       ]).start();
@@ -128,6 +128,15 @@ const SurveyScreen = ({  }) => {
 
 
   const handleSelect = (value: string, parent: number) => {    
+    if (value==="undefined" || !value ) {
+      if (platformdata.platform === 'web') {
+        window.alert('Kérjük, válaszolj a kérdésre, mielőtt továbblépsz.');
+      } else {
+        Alert.alert('Error', 'Kérjük, válaszolj a kérdésre, mielőtt továbblépsz.');
+      }              
+      return;
+    }
+
     setAnswers((prevAnswers) => ({
       ...prevAnswers,
       [parent]: value,

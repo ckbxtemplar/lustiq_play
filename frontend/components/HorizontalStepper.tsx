@@ -10,7 +10,7 @@ interface HorizontalStepperProps {
 
 const HorizontalStepper: React.FC<HorizontalStepperProps> = ({ totalSteps, currentStep = 0 }) => {
 
-  const [stepData] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]); // Lépések adatai (dinamikusan változtatható)
+  const [stepData] = useState<number[]>([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ,20]); // Lépések adatai (dinamikusan változtatható)
 
   return (
     <View style={styles.container}>

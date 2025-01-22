@@ -1,7 +1,7 @@
 import React, {useState, useRef, useEffect} from 'react';
 import { View, StyleSheet, Text, Animated, Image, Alert } from 'react-native';
 import { useAuth } from '../AuthContext';
-import { Redirect  } from 'expo-router';
+import { Redirect, useRouter  } from 'expo-router';
 import Footer from '../components/Footer';
 import HorizontalStepper from '../components/HorizontalStepper';
 import Card from '../components/Card';
@@ -11,9 +11,10 @@ import {COLORS, FONT_SIZES } from '../styles/constants';
 import globalStyles from '../styles/styles';
 import Octicons from '@expo/vector-icons/Octicons';
 import axios from 'axios';
+import LustiqButton from '../components/LustiqButton';
 
 const GameScreen = ({  }) => {
-  const { user, platformdata, isLoading, joinedUser, gameReady, setGameReady, opponentStatus, setOpponentStatus, gameProps, readyToNextQuestion } = useAuth();
+  const { user, platformdata, isLoading, joinedUser, gameReady, setGameReady, opponentStatus, setOpponentStatus, gameProps, setGameProps, readyToNextQuestion } = useAuth();
 
   const [totalSteps, setTotalSteps] = useState<number>(7);
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -40,6 +41,7 @@ const GameScreen = ({  }) => {
   const [disabledButton, setDisabledButton] = useState(false);
   const welcomeOpacity = useRef(new Animated.Value(0)).current;  
   const opacity = useRef(new Animated.Value(1)).current;
+  const router = useRouter();
 
   useEffect(() => {
     Animated.sequence([
@@ -102,6 +104,8 @@ const GameScreen = ({  }) => {
         .then(response => {
           const minScore = response.data.score;
           const questionsData = response.data.questions;
+          const updatedGameProps = { ...gameProps, level: response.data.level };
+          setGameProps(updatedGameProps);   
           setQuestions(questionsData);        
           setTotalSteps(Object.keys(questionsData).length); 
         })
@@ -157,7 +161,7 @@ const GameScreen = ({  }) => {
 
   if (!joinedUser || !user?.sessionToken) {
     return <Redirect href={'/lobby'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
-  }    
+  }  
 
   return (
     <View style={globalStyles.body}>
@@ -190,10 +194,17 @@ const GameScreen = ({  }) => {
               </View>
             </Animated.View>
           ) : welcomeMsg === 'end' ? (
-            <View style={styles.containerEnd}>            
-              <Text style={{fontSize:FONT_SIZES.large, color:COLORS.primary.text, marginTop:8, marginRight:8 }}>Eljött a TI időtök </Text>
-              <Octicons name="heart" size={24} color={COLORS.primary.text} />
-            </View>
+            <View>            
+              <View style={styles.containerEnd}>            
+                <Text style={{fontSize:FONT_SIZES.large, color:COLORS.primary.text, marginTop:8, marginRight:8 }}>Eljött a TI időtök </Text>
+                <Octicons name="heart" size={24} color={COLORS.primary.text} />            
+              </View>
+              <View style={styles.containerEnd}>            
+                <View style={{ marginTop: 16 }}>
+                  <LustiqButton title="Tovább a Páros relaxációhoz" onPress={() => router.push('/relax')} />
+                </View>              
+            </View>   
+          </View>         
           ) : null }             
           <ImageLogo variant='icon' shouldRotate={ isLoading }/>  
         </View>     
