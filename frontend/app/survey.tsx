@@ -214,7 +214,8 @@ const SurveyScreen = ({  }) => {
             <>
               <Image 
                 source={require('../assets/images/lustiq_start_game.png')} // Helyettesítsd a kép útvonalával
-                resizeMode="contain" // Ezzel a kép lefedi az egész nézetet
+                style={styles.image}
+								resizeMode="contain"
                 />              
               <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:40 }}>Az egyensúly megtalálása</Text>
               <Text style={{fontSize:FONT_SIZES.small, color:COLORS.primary.text, marginTop:8 }}>FELMÉRÉS</Text>
@@ -239,7 +240,8 @@ const SurveyScreen = ({  }) => {
             <>
               <Image 
                 source={require('../assets/images/lustiq_start_game.png')} // Helyettesítsd a kép útvonalával
-                resizeMode="contain" // Ezzel a kép lefedi az egész nézetet
+                style={styles.image}
+								resizeMode="contain"								
                 />              
               <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:40, marginBottom:10, textAlign:'center' }}>Köszönjük a válaszokat!</Text>
               <Text style={{fontSize:FONT_SIZES.small, color:'white', marginTop:20, marginBottom:10, textAlign:'center' }}>Kattints a gombra, ha készen állsz az élményre.</Text>              
@@ -286,7 +288,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 10,       
-  }  
+  },
+	image:{
+    height:200,
+		marginBottom:20		
+	}
 });
 
 export default SurveyScreen;

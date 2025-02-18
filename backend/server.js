@@ -423,9 +423,8 @@ app.post('/getQuestions', (req, res) => {
     }    
     const minScore = results[0].score;
 
-    if (minScore < 11)  level = 1;
-    else if( minScore < 21) level = 2;
-    else level = 3;
+    if (minScore < 6)  level = 1;
+    else level = 2;
 
     if (roomQuestions[room]) {      
       finalQuestionIds = roomQuestions[room];
@@ -434,12 +433,10 @@ app.post('/getQuestions', (req, res) => {
       let question_ids = [];
       
       switch (level) {
-        case 3:
-          question_ids = [...question_ids, 74, 75, 76, 77, 79, 80];
         case 2:
-          question_ids = [...question_ids, 62, 63, 65, 66, 67, 69, 70, 71, 72]; //73 at kivettem
+          question_ids = [...question_ids, 65, 66, 67, 69, 70, 71, 72, 73, 74, 75 ,76, 77, 78, 79, 80, 81]; 
         case 1:
-          question_ids = [...question_ids, 48, 50, 52, 54, 56, 58, 60];
+          question_ids = [...question_ids, 48, 49, 50, 51, 52, 53, 54, 56, 57, 58, 59, 60, 61, 62, 63, 64];
           break;
       }
 
@@ -451,7 +448,7 @@ app.post('/getQuestions', (req, res) => {
         }
         return shuffled.slice(0, count); // Az első `count` elemet visszaadjuk
       }
-      const selectedQuestions = getRandomElements(question_ids, 4);
+      const selectedQuestions = getRandomElements(question_ids, 7);
       finalQuestionIds = [...selectedQuestions, ...def_question_ids];
       roomQuestions[room] = finalQuestionIds;
     }
@@ -460,9 +457,11 @@ app.post('/getQuestions', (req, res) => {
     sql = `SELECT q.id as id, q.title as title, q.description as description, qo.id as o_id, qo.title as o_title, qo.description as o_description, q.type as type
       FROM questions as q 
       LEFT JOIN question_options as qo ON q.id = qo.question_id 
-      where q.type = 'talk' AND (q.id IN (${placeholders}) OR q.parent IN (${placeholders}))
+      where q.type = 'talk' AND q.id IN (${placeholders})
+			ORDER BY ID ASC
       LIMIT 10;`;
-    db.query(sql, [...finalQuestionIds, ...finalQuestionIds], (err, results) => {
+		console.log(sql);
+    db.query(sql, [...finalQuestionIds], (err, results) => {
       if (err) {
         console.error("SQL query error:", err);
         return;

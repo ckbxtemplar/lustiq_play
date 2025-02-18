@@ -21,7 +21,7 @@ const FourDigitInput: React.FC<FourDigitInputProps> = ({ onComplete }) => {
     }
 
     if (newCode.every(char => char !== '') && onComplete) {
-      onComplete(newCode.join(''));
+      onComplete(newCode.join('').toLowerCase());
     }
   };
 
@@ -39,7 +39,6 @@ const FourDigitInput: React.FC<FourDigitInputProps> = ({ onComplete }) => {
           ref={(ref) => (inputs.current[index] = ref)}
           style={styles.input}
           maxLength={1}
-          keyboardType="number-pad"
           onChangeText={(text) => handleChange(text, index)}
           onKeyPress={({ nativeEvent }) => {
             if (nativeEvent.key === 'Backspace') {
