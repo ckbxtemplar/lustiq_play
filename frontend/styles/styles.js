@@ -7,7 +7,8 @@ const globalStyles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center', // Középre igazítja a container-t függőlegesen
     backgroundColor: COLORS.primary.background,
-    paddingBottom:30
+		padding:0,
+		margin:0,
   },    
   bodyContainer:{
     flex:1,
@@ -21,14 +22,13 @@ const globalStyles = StyleSheet.create({
     flex:1,    
     alignSelf: 'center',
     width: '100%',
-    maxHeight:600,
   },
   loginContainer:{
     alignSelf: 'center',
     flex:1,
     width: '100%',
     maxWidth: 500,
-    maxHeight:600,    
+		height: 'fit-content',   
     paddingTop:50,    
     padding: 20,  
     backgroundColor:COLORS.secondary.background,

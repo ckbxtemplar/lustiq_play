@@ -14,7 +14,7 @@ import Octicons from '@expo/vector-icons/Octicons';
 import axios from 'axios';
 
 const SurveyScreen = ({  }) => {
-  const { user, isLoading, joinedUser, platformdata, startGame, gameReady, opponentStatus, gameProps } = useAuth();   
+  const { user, isLoading, joinedUser, platformdata, startGame, gameReady, opponentStatus, setOpponentStatus, gameProps } = useAuth();   
   const devHost = platformdata.devHost;
   const router = useRouter();
 
@@ -24,8 +24,8 @@ const SurveyScreen = ({  }) => {
   const [questions, setQuestions] = useState([]); 
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [surveyStatus, setSurveyStatus] = useState('start');
-  const [buttonTitle, setbuttonTitle] = useState('Kezdhetjük!');
-  
+  const [buttonTitle, setbuttonTitle] = useState<React.ReactNode>(<Text>Kezdhetjük!</Text>);
+	const [disabledButton, setDisabledButton] = useState(false);
   const [buttonMessage] =  useState('Tovább');
   const [showMessage, setShowMessage] = useState(false);
   const opacity = useRef(new Animated.Value(0)).current;
@@ -96,11 +96,13 @@ const SurveyScreen = ({  }) => {
     else if (gameReady === 'readyToPlay' && opponentStatus !== 'readyToPlay')
     {
       const t = `${joinedUser.username} még nem töltötte ki..`;
-      setbuttonTitle(t);
+			setDisabledButton(true); 
+      setbuttonTitle(<Text><Text style={{ fontWeight: 'bold' }}>{joinedUser?.username}</Text> még nem töltötte ki...</Text>);
     }
   }, [gameReady, opponentStatus]);
 
   useEffect(() => {
+    setOpponentStatus(false);		
     if (platformdata.platform === 'web') document.title = 'Lustiq Play - Survey';
     const initialize = async () => {
       try {
@@ -246,7 +248,7 @@ const SurveyScreen = ({  }) => {
               <Text style={{fontSize:FONT_SIZES.large, color:'white', marginTop:40, marginBottom:10, textAlign:'center' }}>Köszönjük a válaszokat!</Text>
               <Text style={{fontSize:FONT_SIZES.small, color:'white', marginTop:20, marginBottom:10, textAlign:'center' }}>Kattints a gombra, ha készen állsz az élményre.</Text>              
               { !showMessage ? (                
-                <LustiqButton title={buttonTitle} onPress={startGame}  />        
+                <LustiqButton title={buttonTitle} onPress={startGame} disabled={disabledButton} />        
               ):(
                 <Animated.View style={{ opacity }}>
                   <View style={styles.containerStart}>

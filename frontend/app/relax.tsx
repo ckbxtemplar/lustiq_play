@@ -8,13 +8,15 @@ import ImageLogo from '../components/ImageLogo';
 import Footer from '../components/Footer';
 import LustiqButton from '../components/LustiqButton';
 import { COLORS,RADIUS,FONT_SIZES } from '../styles/constants';
+import { Redirect, useRouter  } from 'expo-router';
 
 export default function App() {
-  const { user, isLoading, gameProps } = useAuth();     
+  const { user, isLoading, gameProps, joinedUser } = useAuth();     
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0); // Lejátszott idő milliszekundumban
   const [duration, setDuration] = useState(0); // Hang hossza milliszekundumban
+	const [message, setMessage] = useState<React.ReactNode>(null);
 
   async function playSound() {
     if (sound) {
@@ -31,9 +33,9 @@ export default function App() {
   
     // Hangfájlok objektuma
     const soundFiles: { [key: number]: any } = {
-      1: require('../assets/relax_group_1.mp3'),
-      2: require('../assets/relax_group_2.mp3'),
-      3: require('../assets/relax_group_3.mp3'),
+      1: require('../assets/kozos_legzesgyakorlat_v2.mp3'),
+      2: require('../assets/kozos_legzesgyakorlat_v2.mp3'),
+      3: require('../assets/kozos_legzesgyakorlat_v2.mp3'),
     };
   
     const selectedSound = soundFiles[gameProps.level];
@@ -57,6 +59,11 @@ export default function App() {
       setPosition(status.positionMillis || 0);
       setDuration(status.durationMillis || 0);
     }
+
+    if (status.didJustFinish) {
+      setIsPlaying(false);
+      setMessage(<><Text style={{color:'white', textAlign:'center', marginTop:20, fontSize: 16}}>Köszönjük, hogy végigmentetek a kérdéseken és a relaxáción!</Text><Text style={{color:'white', textAlign:'center', marginTop:10, marginBottom:20}}>Gratulálunk, hogy tettetek a közös szexuális életetek fejlesztéséért!</Text></>);
+    }
   };
 
   const handleSliderChange = async (value: number) => {
@@ -75,9 +82,9 @@ export default function App() {
       : undefined;
   }, [sound]);
 
-  // if (!joinedUser || !user?.sessionToken) {
-  //   return <Redirect href={'/lobby'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
-  // }
+	if (!joinedUser || !user?.sessionToken) {
+		return <Redirect href={'/lobby'} />; // Ha nem vagy bejelentkezve, nem jelenítjük meg a tartalmat
+	}  
 
   return (
     <View style={globalStyles.body}>
@@ -98,7 +105,8 @@ export default function App() {
             />
             <Text>
               {formatTime(position)} / {formatTime(duration) }
-            </Text>          
+            </Text> 
+						{message}
           </View>
           <ImageLogo variant='icon' shouldRotate={ isLoading }/>
         </View>           

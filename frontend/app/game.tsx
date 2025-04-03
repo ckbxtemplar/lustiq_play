@@ -37,7 +37,7 @@ const GameScreen = ({  }) => {
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [answersStatus, setanswersStatus] = useState('start');
   const [welcomeMsg, setWelcomeMsg] = useState('start');
-  const [buttonMessage, setButtonMessage] =  useState('Tovább');  
+	const [buttonMessage, setButtonMessage] = useState<React.ReactNode>(<Text>Tovább</Text>);
   const [disabledButton, setDisabledButton] = useState(false);
   const welcomeOpacity = useRef(new Animated.Value(0)).current;  
   const opacity = useRef(new Animated.Value(1)).current;
@@ -77,13 +77,14 @@ const GameScreen = ({  }) => {
         const nextStep = currentStep + 1;
         if (questions[nextStep]) {
           setCurrentStep(nextStep);
-          if (questions[nextStep].type == 'talk') setButtonMessage('Kész, várjuk a következő kérdést.')
+          // if (questions[nextStep].type == 'talk') setButtonMessage('Várjuk {} válaszát') 
         } else {
           setWelcomeMsg('end');
         }
         setOpponentStatus('pending');
         setGameReady(false);
-        setDisabledButton(false);        
+        setDisabledButton(false); 
+				setButtonMessage(<Text>Következő lépés</Text>);       
 
         setTimeout(() => {
           Animated.timing(opacity, {
@@ -126,6 +127,7 @@ const GameScreen = ({  }) => {
 
   const handleSelect = (value: string, parent: number) => {
     setDisabledButton(true);    
+		setButtonMessage(<Text>Várunk még <Text style={{ fontWeight: 'bold' }}>{joinedUser?.username}</Text> válaszára</Text>);
     setAnswers((prevAnswers) => ({
       ...prevAnswers,
       [parent]: value,

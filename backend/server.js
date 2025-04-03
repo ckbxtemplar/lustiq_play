@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql');
+const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
@@ -17,7 +17,6 @@ const db = mysql.createPool({
   password: '1st3nMegbassza01',
   database: 'lustiq_play',
   connectTimeout: 10000, // 10 másodperc
-  acquireTimeout: 10000, // 10 másodperc  
 });
 
 db.getConnection((err, connection) => {
@@ -26,20 +25,33 @@ db.getConnection((err, connection) => {
     return;
   }
   console.log('MySQL pool connected');
-  connection.release(); // Kapcsolat visszaadása a pool-ba
+  connection.release();
 });
 
 // WEBSOCKET
 let wss;
 let clients = {};
+let pendingMessages = {};
+
 try {
   wss = new WebSocket.Server({ port: 8095 });
   console.log('WebSocket running on port 8095');
 } catch (error) {
   console.error('Failed to start WebSocket server:', error);
 }
+
 wss.on('connection', (ws, req) => {
   console.log('New client connected.');
+
+  const interval = setInterval(() => {
+    ws.ping();
+  }, 30000);  // 30 másodpercenként
+
+  ws.on('pong', () => {
+    console.log('Pong válasz érkezett');
+  });
+
+
   let userId = null;
   let messagesData = {};
   let toSessionToken = null;
@@ -48,10 +60,10 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (message) => {
     const data = JSON.parse(message);
     messagesData = {};    
-    // Amikor egy kliens bejelentkezik, tároljuk az SQL adatbázisban
-    if (data.type === 'hello') {   
 
+    if (data.type === 'hello') {   
       userId = data.userId;     
+			console.log('hello - fogadas | userId: '+userId);				
       const query = `INSERT INTO user_sessions (user_id, is_connected) VALUES (?, ?) ON DUPLICATE KEY UPDATE is_connected = ?, last_connected = CURRENT_TIMESTAMP`;
       db.query(query, [userId, true, true], (err, results) => {
         if (err) {
@@ -67,25 +79,30 @@ wss.on('connection', (ws, req) => {
           }      
           const sessionToken = results[0].session_token;
           
-          // Tárolom a klienseket
           clients[sessionToken] = ws;
 
-          // Üdvözlő üzenet küldése a kliensnek
           const welcomeMessage = {
             type: 'welcome',
             message: `Welcome, user ${userId}! ${sessionToken}`,
             sessionToken: sessionToken
           };
-          ws.send(JSON.stringify(welcomeMessage)); 
+					console.log(`hello - kuldes | userId: ${userId}, token: ${sessionToken}`);					
+          ws.send(JSON.stringify(welcomeMessage)); // itt nem sendWsMessages mert még nincs címezhető kliens 
+
+          if (pendingMessages[sessionToken] && pendingMessages[sessionToken].length > 0) {
+            console.log(`Sending pending messages to ${sessionToken}`);
+            pendingMessages[sessionToken].forEach(msg => ws.send(JSON.stringify(msg)));
+            delete pendingMessages[sessionToken]; // Töröljük, ha már elküldtük
+          }					
         });
       });  
 
     } else if (data.type === 'join'){
+			console.log('join - fogadas');				
 
       toSessionToken = data.toSessionToken;
       fromSessionToken = data.fromSessionToken;      
-  
-      // Ellenőrizzük, hogy van-e ilyen session_token-hez csatlakozott kliens
+
       if (toSessionToken && fromSessionToken && toSessionToken != fromSessionToken && clients[toSessionToken] && clients[fromSessionToken]) 
       {
         const targetClient = clients[toSessionToken];
@@ -98,6 +115,12 @@ wss.on('connection', (ws, req) => {
         
         const queryPromises = Object.entries(directions).map(async ([key, item]) => {
           const userData = await getUserData(item.token);
+
+					if (!userData) {
+						console.error(`No user data found for token: ${item.token}`);
+						return;
+					}
+
           messagesData[item.to] = {
             type: 'join',
             message: `${userData.username} has joined the game!`,
@@ -105,62 +128,91 @@ wss.on('connection', (ws, req) => {
             joinedUser: { userId: userData.userId, userSession: item.token, username: userData.username, avatar: userData.avatar }
           };
         });
-        
-        Promise.all(queryPromises).then(() => {
-          const query = `
-            INSERT INTO rooms (accept, request, is_connected) 
-            VALUES (?, ?, 1)
-            ON DUPLICATE KEY UPDATE 
-                last_connected = CURRENT_TIMESTAMP,
-                is_connected = 1`;
-        
-          db.query(query, [toSessionToken, fromSessionToken], (err, results) => {
-            if (err) {
-              console.error("Database error:", err);
-              return;
-            }
-        
-            const roomId = results.insertId || results[0]?.id;
-        
-            Object.values(messagesData).forEach(message => {
-              message.room = roomId;
-            });
-        
-            sendWsMessages(messagesData);
-          });
-        }).catch(error => {
-          console.error("Error during getUserData operations:", error);
-        });
+
+				Promise.all(queryPromises).then(() => {
+					const query = `
+							INSERT INTO rooms (accept, request, is_connected) 
+							VALUES (?, ?, 1)
+							ON DUPLICATE KEY UPDATE 
+									last_connected = CURRENT_TIMESTAMP,
+									is_connected = 1`;
+					db.query(query, [toSessionToken, fromSessionToken], (err, results) => {
+							if (err) {
+									console.error("Database error:", err);
+									return;
+							}
+			
+							let roomId;
+							if (results.insertId) {
+									roomId = results.insertId;
+							} else {
+									const selectQuery = `SELECT id FROM rooms WHERE (accept = ? AND request = ?) OR (accept = ? AND request = ?)`;
+									db.query(selectQuery, [toSessionToken, fromSessionToken, fromSessionToken, toSessionToken], (err, rows) => {
+											if (err) {
+													console.error("Database select error:", err);
+													return;
+											}
+			
+											roomId = rows.length > 0 ? rows[0].id : undefined;
+			
+											Object.values(messagesData).forEach(message => {
+													message.room = roomId;
+											});
+											console.log('join - kuldes 1');
+											sendWsMessages(messagesData);
+									});
+									return;
+							}
+			
+							Object.values(messagesData).forEach(message => {
+									message.room = roomId;
+							});
+							console.log('join - kuldes 2');
+							sendWsMessages(messagesData);
+					});
+				}).catch(error => {
+						console.error("Error while fetching user data:", error);
+				});				
       }
-    } else if (data.type === 'startSurvey'){  
+			
+    } 
+		else if (data.type === 'startSurvey')
+		{  
+			console.log('startSurvey - fogadas');				
       toSessionToken = data.toSessionToken;
       fromSessionToken = data.fromSessionToken; 
       const startData = { type: 'startSurvey',  message: `start the survey`};
       messagesData[toSessionToken] = startData;
       messagesData[fromSessionToken] = startData;
       sendWsMessages(messagesData);
-    } else if (data.type === 'readyToPlay'){
+    } 
+		else if (data.type === 'readyToPlay')
+		{
+			console.log('readyToPlay - fogadas');				
       toSessionToken = data.toSessionToken;   
       fromSessionToken = data.fromSessionToken;    
       const startData = { type: 'readyToPlay',  message: `ready to play (${fromSessionToken})`, fromSessionToken:fromSessionToken };
       messagesData[toSessionToken] = startData;
       sendWsMessages(messagesData);
-    } else if (data.type === 'readyToNextQuestion'){
+    } 
+		else if (data.type === 'readyToNextQuestion')
+		{
+			console.log('readyToNextQuestion - fogadas');			
       toSessionToken = data.toSessionToken;   
       fromSessionToken = data.fromSessionToken;    
       const startData = { type: 'readyToNextQuestion',  message: `ready to the next question (${fromSessionToken})`, fromSessionToken:fromSessionToken };
       messagesData[toSessionToken] = startData;
       sendWsMessages(messagesData);
-    }
-    
+    }    
 
   });
 
   // Amikor egy kliens megszakítja a kapcsolatot
-  ws.on('close', () => {
-    // Az adatbázisban jelezzük a kliens lecsatlakozását
+  ws.on('close', () => {    
+		console.log('on(close) - fogadas');		
+		clearInterval(interval);
     const query = `UPDATE user_sessions SET is_connected = ? WHERE user_id = ?`;
-    db.query(query, [false, userId], (err, results) => {
+    db.query(query, [0, userId], (err, results) => {
 
       if (err) {
         console.error('Failed to update user session on disconnect:', err);
@@ -172,27 +224,45 @@ wss.on('connection', (ws, req) => {
 
 });
 
-function getUserData(userSession) {
-  return new Promise((resolve, reject) => {
-    const selectQuery = `SELECT u.id as id, u.email as email, u.username as username, i.image as avatar
-    FROM users as u 
-    LEFT JOIN user_sessions as s ON u.id = s.user_id 
-    LEFT JOIN user_images as i ON u.id = i.user_id AND i.category = 'avatar'     
-    WHERE s.session_token = ? ORDER BY s.id DESC LIMIT 1`;
-    db.query(selectQuery, [userSession], (err, results) => {
-      if (err) {
-        reject(err);
-        return;
+function sendWsMessages(messagesData = {}) {
+  Object.entries(messagesData).forEach(([key, item]) => {
+    const wsClient = clients[key];
+
+    if (wsClient && wsClient.readyState === WebSocket.OPEN)
+    {
+			console.log('kikuldes:');
+			console.log(item);
+      wsClient.send(JSON.stringify(item));  
+    } 
+		else 
+		{
+			console.log('kuldes - NEM KULDI KI');
+      console.log(`Üzenet elmentve (nincs aktív kapcsolat): ${key}`);
+      if (!pendingMessages[key]) {
+        pendingMessages[key] = [];
       }
-      const userData = results[0];
-      resolve({
-        userId: userData.id,
-        userSession: userSession,
-        username: userData.username,
-        avatar: userData.avatar
-      });
-    });
-  });
+      pendingMessages[key].push(item); // Elmentjük a függőben lévő üzenetek közé			
+		}
+  });    
+}
+
+async function getUserData(userSession) {
+	try {
+			const selectQuery = `SELECT u.id as id, u.email, u.username, i.image as avatar FROM users u LEFT JOIN user_sessions s ON u.id = s.user_id LEFT JOIN user_images i ON u.id = i.user_id AND i.category = 'avatar' WHERE s.session_token = ? ORDER BY s.id DESC LIMIT 1`;
+
+			const [results] = await db.promise().query(selectQuery, [userSession]);
+			if (results.length === 0) return null;
+
+			return {
+					userId: results[0].id,
+					userSession: userSession,
+					username: results[0].username,
+					avatar: results[0].avatar
+			};
+	} catch (err) {
+			console.error('Error fetching user data:', err);
+			return null;
+	}
 }
 
 function getPartner(userSession) {
@@ -205,7 +275,7 @@ function getPartner(userSession) {
       }
 
       if (results.length === 0) {
-        resolve(null); // Nincs találat, így visszaad null-t
+        resolve(null);
         return;
       }
 
@@ -222,29 +292,15 @@ function getPartner(userSession) {
   });
 }
 
-function sendWsMessages(messagesData = {}) {
-  Object.entries(messagesData).forEach(([key, item]) => {
-    const wsClient = clients[key];
-
-    if (wsClient && wsClient.readyState === WebSocket.OPEN)
-    {
-      wsClient.send(JSON.stringify(item));  
-    }
-  });    
-}
-
 async function handlePartnerData(userSession) {
   try {
-    // Párhuzamosan futtatjuk a getPartner és a getUserData-t
     const partnerPromise = getPartner(userSession);
     const userDataPromise = getUserData(userSession);
 
-    // Megvárjuk, hogy mindkettő befejeződjön
     const [partnerSession, userData] = await Promise.all([partnerPromise, userDataPromise]);
 
     if (partnerSession) {
       if (userData) {
-        // Ha mindkét adat megvan, akkor elküldhetjük az üzenetet
         const messagesData = {
           [partnerSession]: {
             type: 'refreshJoinedPlayer',
@@ -460,7 +516,6 @@ app.post('/getQuestions', (req, res) => {
       where q.type = 'talk' AND q.id IN (${placeholders})
 			ORDER BY ID ASC
       LIMIT 10;`;
-		console.log(sql);
     db.query(sql, [...finalQuestionIds], (err, results) => {
       if (err) {
         console.error("SQL query error:", err);
@@ -525,14 +580,7 @@ app.post('/saveAnswers', (req, res) => {
 
 // Teszt API token validálással
 app.get('/hello', (req, res) => {
-  // const token = req.headers['authorization'];
-  // if (!token) return res.status(401).json({ message: 'Unauthorized' });
-
-  // jwt.verify(token, 'yvhtR5}#O]w7lAs', (err, decoded) => {
-  //   if (err) return res.status(401).json({ message: 'Invalid token' });
-  //   res.send('Hello World');
-  // });
-  res.send('Hello World');
+  res.send('Belépés és átirányítás...');
 });
 
 app.listen(8090, () => {

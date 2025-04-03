@@ -16,7 +16,7 @@ interface RadioSelectProps {
   parent: number;
   type: string;
   disabled?: boolean;
-  buttonMessage: string;
+  buttonMessage: React.ReactNode;
   onSelect: (value: string, parent: number) => void;
 }
 

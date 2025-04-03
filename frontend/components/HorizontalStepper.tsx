@@ -37,7 +37,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'center',
     width:'100%',    
-    maxWidth:400
   },
   stepperContainer: {
     flexDirection: 'row',
@@ -46,13 +45,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   step: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
-    margin: 5,
+    margin: 4,
     opacity: 0.5
   },
   activeStep: {
@@ -72,6 +71,7 @@ const styles = StyleSheet.create({
   stepText: {
     color: COLORS.accent.background,
     fontWeight: 'bold',
+		fontSize: 10,
   }
 });
 

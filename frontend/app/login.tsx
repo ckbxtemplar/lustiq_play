@@ -24,7 +24,7 @@ const LoginScreen = () => {
     axios.post(`https://${devHost}/login`, { email, password })
       .then(response => {
         const { token } = response.data; 
-        // const decodedToken = JWT.decode(token, 'yvhtR5}#O]w7lAs');     
+  
         const decodedToken = token;
         logIn(decodedToken);
        
@@ -74,7 +74,7 @@ const LoginScreen = () => {
       if (platformdata.platform === 'web') {
         window.alert('Registration successful!');
       } else {
-        Alert.alert('Error', 'Registration successful!');
+        Alert.alert('Success', 'Registration successful!');
       }       
       console.log('Registration successful!');      
       setShowRegistration(false); // Vissza a bejelentkezési felületre
@@ -99,8 +99,7 @@ const LoginScreen = () => {
 
   return (
     <View style={globalStyles.body}>
-      <View style={globalStyles.loginContainer}>
-        <Text style={{fontSize:18, alignContent:'center', alignSelf:'center', color:'white'}}>HAMAROSAN INDULUNK</Text>
+      <View style={globalStyles.loginContainer}>        
       <ImageLogo /> 
       {showRegistration ? (
         // Regisztrációs felület

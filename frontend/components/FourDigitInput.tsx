@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { TextInput, View, StyleSheet } from 'react-native';
-import { COLORS,RADIUS,FONT_SIZES } from '../styles/constants';
+import { COLORS, RADIUS, FONT_SIZES } from '../styles/constants';
 
 type FourDigitInputProps = {
-    onComplete: (code: string) => void; // onComplete típusának meghatározása
+  onComplete: (code: string) => void;
 };
 
 const FourDigitInput: React.FC<FourDigitInputProps> = ({ onComplete }) => {
@@ -20,15 +20,24 @@ const FourDigitInput: React.FC<FourDigitInputProps> = ({ onComplete }) => {
       inputs.current[index + 1]?.focus();
     }
 
-    if (newCode.every(char => char !== '') && onComplete) {
+    if (newCode.every((char) => char !== '') && onComplete) {
       onComplete(newCode.join('').toLowerCase());
     }
   };
 
-  const handleBackspace = (text: string, index: number) => {
-    if (!text && index > 0) {
+  const handleBackspace = (index: number) => {
+    const newCode = [...code];
+
+    if (newCode[index] !== '') {
+      // Ha az aktuális mező nem üres, csak töröljük a karaktert
+      newCode[index] = '';
+    } else if (index > 0) {
+      // Ha az aktuális üres és nem az első mezőben vagyunk, lépjünk vissza és töröljük az előzőt
+      newCode[index - 1] = '';
       inputs.current[index - 1]?.focus();
     }
+
+    setCode(newCode);
   };
 
   return (
@@ -42,7 +51,7 @@ const FourDigitInput: React.FC<FourDigitInputProps> = ({ onComplete }) => {
           onChangeText={(text) => handleChange(text, index)}
           onKeyPress={({ nativeEvent }) => {
             if (nativeEvent.key === 'Backspace') {
-              handleBackspace('', index);
+              handleBackspace(index);
             }
           }}
           value={code[index]}
@@ -58,8 +67,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   input: {
-    width:36,
-    height:42,
+    width: 36,
+    height: 42,
     borderWidth: 0,
     color: 'white',
     backgroundColor: COLORS.primary.background,
